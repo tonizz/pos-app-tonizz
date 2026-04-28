@@ -77,11 +77,9 @@ export default function EditEmployeePage() {
     setLoading(true)
 
     try {
-      const updateData = { ...formData }
       // Remove password if empty (don't update password)
-      if (!updateData.password) {
-        delete updateData.password
-      }
+      const { password, ...updateData } = formData
+      const dataToSend = password ? formData : updateData
 
       const response = await fetch(`/api/employees/${params.id}`, {
         method: 'PUT',
@@ -89,7 +87,7 @@ export default function EditEmployeePage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(dataToSend)
       })
 
       if (!response.ok) {
