@@ -4,12 +4,6 @@ import { verifyToken } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 // Clock In/Out
 export async function POST(request: NextRequest) {
   try {

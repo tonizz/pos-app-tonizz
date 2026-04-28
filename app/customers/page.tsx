@@ -77,7 +77,7 @@ export default function CustomersPage() {
               </div>
             </div>
             <button
-              onClick={() => toast.info('Add Customer feature coming soon!')}
+              onClick={() => toast('Add Customer feature coming soon!')}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus size={20} />
@@ -162,13 +162,13 @@ export default function CustomersPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toast.info('Edit feature coming soon!')}
+                            onClick={() => toast('Edit feature coming soon!')}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                           >
                             <Edit size={16} />
                           </button>
                           <button
-                            onClick={() => toast.info('Delete feature coming soon!')}
+                            onClick={() => toast('Delete feature coming soon!')}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           >
                             <Trash2 size={16} />
