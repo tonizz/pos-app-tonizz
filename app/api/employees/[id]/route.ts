@@ -6,9 +6,10 @@ import * as bcrypt from 'bcryptjs'
 // GET - Get employee by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -22,7 +23,7 @@ export async function GET(
     }
 
     const employee = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -57,9 +58,10 @@ export async function GET(
 // PUT - Update employee
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -100,7 +102,7 @@ export async function PUT(
 
     // Check if employee exists
     const existingEmployee = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingEmployee) {
@@ -156,7 +158,7 @@ export async function PUT(
 
     // Update employee
     const employee = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -199,9 +201,10 @@ export async function PUT(
 // DELETE - Delete employee
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -227,7 +230,7 @@ export async function DELETE(
 
     // Check if employee exists
     const employee = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!employee) {
@@ -235,7 +238,7 @@ export async function DELETE(
     }
 
     // Prevent deleting yourself
-    if (params.id === decoded.userId) {
+    if (id === decoded.userId) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
@@ -244,7 +247,7 @@ export async function DELETE(
 
     // Delete employee
     await prisma.user.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     // Log activity
@@ -253,7 +256,7 @@ export async function DELETE(
         userId: decoded.userId,
         action: 'DELETE',
         entity: 'User',
-        entityId: params.id,
+        entityId: id,
         details: `Deleted employee: ${employee.name}`
       }
     })
