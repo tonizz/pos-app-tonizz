@@ -289,7 +289,7 @@ async function main() {
       name: 'John Doe',
       phone: '081234567890',
       email: 'john@example.com',
-      memberTier: 'GOLD',
+      memberTier: 'GOLD' as const,
       points: 500
     },
     {
@@ -297,7 +297,7 @@ async function main() {
       name: 'Jane Smith',
       phone: '081234567891',
       email: 'jane@example.com',
-      memberTier: 'SILVER',
+      memberTier: 'SILVER' as const,
       points: 200
     }
   ]
