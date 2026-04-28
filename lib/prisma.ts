@@ -4,8 +4,10 @@ import { Pool } from 'pg'
 
 const connectionString = process.env.DATABASE_URL
 
+// Use connection pooling only in development
 const pool = new Pool({
   connectionString,
+  max: 1, // Limit connections for serverless
 })
 
 const adapter = new PrismaPg(pool)
