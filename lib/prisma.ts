@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 
-const connectionString = process.env.DATABASE_URL
+const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_YgLuCh7w8dyS@ep-muddy-tree-ao4oslno-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
 
 // Use connection pooling only in development
 const pool = new Pool({
