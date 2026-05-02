@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
       stocks,
       suppliers,
       transactions,
-      employees,
       promotions
     ] = await Promise.all([
       prisma.user.findMany(),
@@ -44,7 +43,6 @@ export async function POST(request: NextRequest) {
           payments: true
         }
       }),
-      prisma.employee.findMany(),
       prisma.promotion.findMany()
     ])
 
@@ -60,7 +58,6 @@ export async function POST(request: NextRequest) {
         stocks,
         suppliers,
         transactions,
-        employees,
         promotions
       }
     }

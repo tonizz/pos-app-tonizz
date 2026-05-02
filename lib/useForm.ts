@@ -34,14 +34,14 @@ export function useForm<T extends Record<string, any>>({
 
     try {
       // Validate single field
-      const fieldSchema = validationSchema.shape?.[name]
+      const fieldSchema = (validationSchema as any).shape?.[name]
       if (fieldSchema) {
         fieldSchema.parse(value)
       }
       return null
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const firstError = error.errors?.[0]
+        const firstError = error.issues?.[0]
         return firstError?.message || 'Invalid value'
       }
       return 'Invalid value'

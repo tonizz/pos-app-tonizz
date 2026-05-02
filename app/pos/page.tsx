@@ -312,7 +312,7 @@ export default function POSPage() {
   const removePromotion = () => {
     setAppliedPromotion(null)
     setDiscount(0)
-    toast.info('Promotion removed')
+    toast.success('Promotion removed')
   }
 
   const handleBarcodeSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {

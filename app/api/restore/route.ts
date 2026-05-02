@@ -118,17 +118,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Restore employees
-      if (backup.data.employees && backup.data.employees.length > 0) {
-        for (const employee of backup.data.employees) {
-          await tx.employee.upsert({
-            where: { id: employee.id },
-            update: employee,
-            create: employee
-          })
-        }
-      }
-
       // Restore promotions
       if (backup.data.promotions && backup.data.promotions.length > 0) {
         for (const promotion of backup.data.promotions) {
