@@ -57,27 +57,27 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" suppressHydrationWarning>
+    <div className="min-h-screen bg-gray-900" suppressHydrationWarning>
       <Toaster position="top-right" />
 
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-white"
               >
                 <ArrowLeft size={24} />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-                <p className="text-sm text-gray-600">Manage your customers & members</p>
+                <h1 className="text-2xl font-bold text-white">Customers</h1>
+                <p className="text-sm text-gray-400">Manage your customers & members</p>
               </div>
             </div>
             <button
-              onClick={() => toast('Add Customer feature coming soon!')}
+              onClick={() => router.push('/loyalty')}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus size={20} />
@@ -89,7 +89,7 @@ export default function CustomersPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={20} />
             <input
@@ -97,7 +97,7 @@ export default function CustomersPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search customers by name, phone, or email..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -108,43 +108,43 @@ export default function CustomersPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         ) : customers.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <Users size={64} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No customers found</h3>
-            <p className="text-gray-600">Try adjusting your search</p>
+          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-12 text-center">
+            <Users size={64} className="mx-auto text-gray-600 mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">No customers found</h3>
+            <p className="text-gray-400">Try adjusting your search</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-900 border-b border-gray-700">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Contact</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Member Tier</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Points</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Total Spent</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Customer</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Contact</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Member Tier</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Points</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Total Spent</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {customers.map((customer) => (
-                    <tr key={customer.id} className="border-b hover:bg-gray-50">
+                    <tr key={customer.id} className="border-b border-gray-700 hover:bg-gray-700">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-semibold">
+                          <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center">
+                            <span className="text-blue-400 font-semibold">
                               {customer.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-900">{customer.name}</p>
+                            <p className="font-semibold text-white">{customer.name}</p>
                             <p className="text-xs text-gray-500">{customer.address || '-'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="text-sm text-gray-900">{customer.phone || '-'}</p>
+                        <p className="text-sm text-gray-300">{customer.phone || '-'}</p>
                         <p className="text-xs text-gray-500">{customer.email || '-'}</p>
                       </td>
                       <td className="py-3 px-4">
@@ -154,22 +154,22 @@ export default function CustomersPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm font-semibold text-blue-600">{customer.points} pts</span>
+                        <span className="text-sm font-semibold text-blue-400">{customer.points} pts</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(customer.totalSpent)}</span>
+                        <span className="text-sm font-semibold text-gray-300">{formatCurrency(customer.totalSpent)}</span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toast('Edit feature coming soon!')}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            onClick={() => router.push('/loyalty')}
+                            className="p-2 text-blue-400 hover:bg-gray-600 rounded-lg"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => toast('Delete feature coming soon!')}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            className="p-2 text-red-400 hover:bg-gray-600 rounded-lg"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -185,7 +185,7 @@ export default function CustomersPage() {
 
         {/* Summary */}
         {!loading && customers.length > 0 && (
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-gray-400">
             Showing {customers.length} customer{customers.length !== 1 ? 's' : ''}
           </div>
         )}
