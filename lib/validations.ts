@@ -192,6 +192,174 @@ export const loginSchema = z.object({
     .max(100, 'Password must not exceed 100 characters')
 })
 
+// Customer Validation Schema
+export const customerSchema = z.object({
+  name: z.string()
+    .min(3, 'Customer name must be at least 3 characters')
+    .max(100, 'Customer name must not exceed 100 characters'),
+  email: z.string()
+    .email('Invalid email address')
+    .optional()
+    .or(z.literal('')),
+  phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number must not exceed 15 digits')
+    .regex(/^[0-9+\-\s()]+$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses'),
+  address: z.string()
+    .max(200, 'Address must not exceed 200 characters')
+    .optional()
+    .or(z.literal('')),
+  city: z.string()
+    .max(50, 'City must not exceed 50 characters')
+    .optional()
+    .or(z.literal('')),
+  notes: z.string()
+    .max(500, 'Notes must not exceed 500 characters')
+    .optional()
+    .or(z.literal(''))
+})
+
+// Supplier Validation Schema
+export const supplierSchema = z.object({
+  name: z.string()
+    .min(3, 'Supplier name must be at least 3 characters')
+    .max(100, 'Supplier name must not exceed 100 characters'),
+  email: z.string()
+    .email('Invalid email address')
+    .optional()
+    .or(z.literal('')),
+  phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number must not exceed 15 digits')
+    .regex(/^[0-9+\-\s()]+$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses'),
+  address: z.string()
+    .max(200, 'Address must not exceed 200 characters')
+    .optional()
+    .or(z.literal('')),
+  city: z.string()
+    .max(50, 'City must not exceed 50 characters')
+    .optional()
+    .or(z.literal('')),
+  notes: z.string()
+    .max(500, 'Notes must not exceed 500 characters')
+    .optional()
+    .or(z.literal(''))
+})
+
+// Employee Validation Schema
+export const employeeSchema = z.object({
+  name: z.string()
+    .min(3, 'Employee name must be at least 3 characters')
+    .max(100, 'Employee name must not exceed 100 characters'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Invalid email address'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(100, 'Password must not exceed 100 characters')
+    .optional()
+    .or(z.literal('')),
+  phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number must not exceed 15 digits')
+    .regex(/^[0-9+\-\s()]+$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses')
+    .optional()
+    .or(z.literal('')),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'CASHIER', 'MANAGER', 'SALES'], {
+    errorMap: () => ({ message: 'Please select a valid role' })
+  }),
+  address: z.string()
+    .max(200, 'Address must not exceed 200 characters')
+    .optional()
+    .or(z.literal(''))
+})
+
+// Warehouse Validation Schema
+export const warehouseSchema = z.object({
+  name: z.string()
+    .min(3, 'Warehouse name must be at least 3 characters')
+    .max(100, 'Warehouse name must not exceed 100 characters'),
+  code: z.string()
+    .min(2, 'Warehouse code must be at least 2 characters')
+    .max(20, 'Warehouse code must not exceed 20 characters')
+    .regex(/^[A-Z0-9-]+$/, 'Warehouse code must contain only uppercase letters, numbers, and hyphens'),
+  address: z.string()
+    .min(5, 'Address must be at least 5 characters')
+    .max(200, 'Address must not exceed 200 characters'),
+  phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(15, 'Phone number must not exceed 15 digits')
+    .regex(/^[0-9+\-\s()]+$/, 'Phone number can only contain numbers, +, -, spaces, and parentheses')
+    .optional()
+    .or(z.literal('')),
+  isActive: z.boolean().default(true)
+})
+
+// Promotion Validation Schema
+export const promotionSchema = z.object({
+  name: z.string()
+    .min(3, 'Promotion name must be at least 3 characters')
+    .max(100, 'Promotion name must not exceed 100 characters'),
+  description: z.string()
+    .max(500, 'Description must not exceed 500 characters')
+    .optional()
+    .or(z.literal('')),
+  type: z.enum(['PERCENTAGE', 'FIXED', 'BUY_X_GET_Y'], {
+    errorMap: () => ({ message: 'Please select a valid promotion type' })
+  }),
+  value: z.number()
+    .min(0, 'Value must be at least 0')
+    .max(100, 'Percentage cannot exceed 100%'),
+  minPurchase: z.number()
+    .min(0, 'Minimum purchase must be at least 0')
+    .optional(),
+  maxDiscount: z.number()
+    .min(0, 'Maximum discount must be at least 0')
+    .optional(),
+  startDate: z.string()
+    .min(1, 'Start date is required'),
+  endDate: z.string()
+    .min(1, 'End date is required'),
+  isActive: z.boolean().default(true)
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return new Date(data.endDate) >= new Date(data.startDate)
+  }
+  return true
+}, {
+  message: 'End date must be after start date',
+  path: ['endDate']
+})
+
+// Stock Transfer Validation Schema
+export const stockTransferSchema = z.object({
+  fromWarehouseId: z.string()
+    .min(1, 'Source warehouse is required'),
+  toWarehouseId: z.string()
+    .min(1, 'Destination warehouse is required'),
+  notes: z.string()
+    .max(500, 'Notes must not exceed 500 characters')
+    .optional()
+    .or(z.literal(''))
+}).refine((data) => data.fromWarehouseId !== data.toWarehouseId, {
+  message: 'Source and destination warehouse must be different',
+  path: ['toWarehouseId']
+})
+
+// Purchase Order Validation Schema
+export const purchaseOrderSchema = z.object({
+  supplierId: z.string()
+    .min(1, 'Supplier is required'),
+  warehouseId: z.string()
+    .min(1, 'Warehouse is required'),
+  expectedDate: z.string()
+    .min(1, 'Expected date is required'),
+  notes: z.string()
+    .max(500, 'Notes must not exceed 500 characters')
+    .optional()
+    .or(z.literal(''))
+})
+
 // User Registration Schema
 export const userSchema = z.object({
   name: z.string()
