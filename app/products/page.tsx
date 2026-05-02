@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '@/lib/utils'
 import toast, { Toaster } from 'react-hot-toast'
-import { Package, Plus, Edit, Trash2, Search, ArrowLeft } from 'lucide-react'
+import { Package, Plus, Edit, Trash2, Search, ArrowLeft, Camera } from 'lucide-react'
 import EditProductModal from '../components/EditProductModal'
 import AddProductModal from '../components/AddProductModal'
+import BarcodeScanner from '../components/BarcodeScanner'
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -20,6 +21,13 @@ export default function ProductsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [scannedBarcode, setScannedBarcode] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -43,9 +51,11 @@ export default function ProductsPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
-      setCategories(data)
+      const categoryList = Array.isArray(data) ? data : []
+      setCategories(categoryList)
     } catch (error) {
       toast.error('Failed to fetch categories')
+      setCategories([])
     }
   }
 
@@ -71,6 +81,17 @@ export default function ProductsPage() {
   const handleEditProduct = (product: any) => {
     setEditingProduct(product)
     setShowEditModal(true)
+  }
+
+  const handleBarcodeScan = (barcode: string) => {
+    setScannedBarcode(barcode)
+    setShowAddModal(true)
+    toast.success(`Barcode scanned: ${barcode}`)
+  }
+
+  const handleOpenAddModal = () => {
+    setScannedBarcode('')
+    setShowAddModal(true)
   }
 
   const handleCreateProduct = async (productData: any) => {
@@ -144,16 +165,31 @@ export default function ProductsPage() {
     }
   }
 
+  if (!mounted) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gray-900" suppressHydrationWarning>
       <Toaster position="top-right" />
 
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
+      />
+
       {/* Add Product Modal */}
       <AddProductModal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false)
+          setScannedBarcode('')
+        }}
         onCreate={handleCreateProduct}
         categories={categories}
+        initialBarcode={scannedBarcode}
       />
 
       {/* Edit Product Modal */}
@@ -183,13 +219,22 @@ export default function ProductsPage() {
                 <p className="text-sm text-gray-400">Manage your products</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus size={20} />
-              Add Product
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBarcodeScanner(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                <Camera size={20} />
+                Scan Barcode
+              </button>
+              <button
+                onClick={handleOpenAddModal}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus size={20} />
+                Add Product
+              </button>
+            </div>
           </div>
         </div>
       </header>

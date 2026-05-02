@@ -49,6 +49,7 @@ model Store {
   logo      String?
   npwn      String?
   taxRate   Float    @default(0)
+  taxInclusive Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -57,6 +58,7 @@ model Category {
   id        String     @id @default(uuid())
   name      String
   parentId  String?
+  taxRate   Float?
   parent    Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
   children  Category[] @relation("SubCategories")
   products  Product[]
@@ -78,6 +80,7 @@ model Product {
   wholesalePrice Float?
   autoDiscount Float?
   autoDiscountType String?
+  taxRate   Float?
   images      String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -87,6 +90,8 @@ model Product {
   stocks          Stock[]
   transactionItems TransactionItem[]
   supplierProducts SupplierProduct[]
+  transferItems   StockTransferItem[]
+  purchaseOrderItems PurchaseOrderItem[]
 }
 
 model ProductVariant {
@@ -134,6 +139,9 @@ model Warehouse {
   stocks         Stock[]
   stockMovements StockMovement[]
   transactions   Transaction[]
+  transfersFrom  StockTransfer[] @relation("FromWarehouse")
+  transfersTo    StockTransfer[] @relation("ToWarehouse")
+  purchaseOrders PurchaseOrder[]
 }
 
 model StockMovement {
@@ -157,6 +165,38 @@ enum MovementType {
   RETURN
 }
 
+model StockTransfer {
+  id              String              @id @default(uuid())
+  transferNo      String              @unique
+  fromWarehouseId String
+  fromWarehouse   Warehouse           @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouseId   String
+  toWarehouse     Warehouse           @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  status          StockTransferStatus @default(PENDING)
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  items StockTransferItem[]
+}
+
+enum StockTransferStatus {
+  PENDING
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+model StockTransferItem {
+  id              String        @id @default(uuid())
+  transferId      String
+  transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  createdAt       DateTime      @default(now())
+}
+
 model Supplier {
   id        String   @id @default(uuid())
   name      String
@@ -167,7 +207,8 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products SupplierProduct[]
+  products       SupplierProduct[]
+  purchaseOrders PurchaseOrder[]
 }
 
 model SupplierProduct {
@@ -183,6 +224,46 @@ model SupplierProduct {
   @@unique([supplierId, productId])
 }
 
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  poNumber        String              @unique
+  supplierId      String
+  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  warehouseId     String
+  warehouse       Warehouse           @relation(fields: [warehouseId], references: [id])
+  status          PurchaseOrderStatus @default(DRAFT)
+  subtotal        Float
+  tax             Float               @default(0)
+  total           Float
+  expectedDate    DateTime?
+  receivedDate    DateTime?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  items PurchaseOrderItem[]
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  price           Float
+  subtotal        Float
+  createdAt       DateTime      @default(now())
+}
+
 model Customer {
   id          String        @id @default(uuid())
   name        String
@@ -192,10 +273,14 @@ model Customer {
   memberTier  MemberTier    @default(BRONZE)
   points      Int           @default(0)
   totalSpent  Float         @default(0)
+  creditLimit Float         @default(0)
+  creditBalance Float       @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   transactions Transaction[]
+  creditTransactions CreditTransaction[]
+  creditPayments CreditPayment[]
 }
 
 enum MemberTier {
@@ -203,6 +288,43 @@ enum MemberTier {
   SILVER
   GOLD
   PLATINUM
+}
+
+model CreditTransaction {
+  id            String              @id @default(uuid())
+  customerId    String
+  customer      Customer            @relation(fields: [customerId], references: [id])
+  transactionId String?             @unique
+  transaction   Transaction?        @relation(fields: [transactionId], references: [id])
+  amount        Float
+  status        CreditStatus        @default(UNPAID)
+  dueDate       DateTime?
+  paidDate      DateTime?
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  payments      CreditPayment[]
+}
+
+enum CreditStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+model CreditPayment {
+  id                  String            @id @default(uuid())
+  creditTransactionId String
+  creditTransaction   CreditTransaction @relation(fields: [creditTransactionId], references: [id], onDelete: Cascade)
+  customerId          String
+  customer            Customer          @relation(fields: [customerId], references: [id])
+  amount              Float
+  paymentMethod       String
+  reference           String?
+  notes               String?
+  createdAt           DateTime          @default(now())
 }
 
 model Promotion {
@@ -243,6 +365,8 @@ model Transaction {
   discountApprovedBy String?
   discountApprovedByUser User? @relation("DiscountApprover", fields: [discountApprovedBy], references: [id])
   tax          Float       @default(0)
+  taxRate      Float       @default(0)
+  taxType      String      @default("INCLUSIVE")
   total        Float
   paymentMethod String
   paidAmount   Float
@@ -254,6 +378,7 @@ model Transaction {
 
   items        TransactionItem[]
   payments     Payment[]
+  creditTransaction CreditTransaction?
 }
 
 enum TransactionStatus {
@@ -359,4 +484,23 @@ model Location {
   longitude Float
   accuracy  Float?
   createdAt DateTime @default(now())
+}
+
+// Tax System Models
+model TaxSetting {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "PPN", "VAT", "Sales Tax"
+  rate        Float    // e.g., 11 for 11%
+  type        TaxType  @default(INCLUSIVE)
+  isActive    Boolean  @default(true)
+  applyToAll  Boolean  @default(true)
+  categories  String?  // JSON array of category IDs if not applyToAll
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TaxType {
+  INCLUSIVE  // Tax included in price (default for retail)
+  EXCLUSIVE  // Tax added to price (for B2B)
 }

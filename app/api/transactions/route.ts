@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
       warehouseId,
       discount,
       tax,
+      taxRate,
+      taxType,
       paymentMethod,
       paidAmount,
       payments
@@ -44,7 +46,17 @@ export async function POST(request: NextRequest) {
     }
 
     const subtotal = items.reduce((sum: number, item: any) => sum + item.subtotal, 0)
-    const total = subtotal - (discount || 0) + (tax || 0)
+
+    // Calculate total based on tax type
+    let total
+    if (taxType === 'INCLUSIVE') {
+      // Tax already included in price, don't add it again
+      total = subtotal - (discount || 0)
+    } else {
+      // Tax is exclusive, add it to total
+      total = subtotal - (discount || 0) + (tax || 0)
+    }
+
     const changeAmount = paidAmount - total
 
     if (changeAmount < 0) {
@@ -66,6 +78,8 @@ export async function POST(request: NextRequest) {
           subtotal,
           discount: discount || 0,
           tax: tax || 0,
+          taxRate: taxRate || 0,
+          taxType: taxType || 'INCLUSIVE',
           total,
           paymentMethod,
           paidAmount,

@@ -9,13 +9,15 @@ interface AddProductModalProps {
   onClose: () => void
   onCreate: (data: any) => Promise<void>
   categories: any[]
+  initialBarcode?: string
 }
 
 export default function AddProductModal({
   isOpen,
   onClose,
   onCreate,
-  categories
+  categories,
+  initialBarcode = ''
 }: AddProductModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -32,6 +34,16 @@ export default function AddProductModal({
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Set barcode when initialBarcode changes
+  useEffect(() => {
+    if (initialBarcode) {
+      setFormData(prev => ({ ...prev, barcode: initialBarcode }))
+      // Auto-generate SKU from barcode
+      const skuFromBarcode = `PRD-${initialBarcode.slice(-6)}`
+      setFormData(prev => ({ ...prev, sku: skuFromBarcode }))
+    }
+  }, [initialBarcode])
 
   // Auto-generate SKU when category changes
   useEffect(() => {
@@ -179,7 +191,7 @@ export default function AddProductModal({
                   type="text"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   required
                   placeholder="Auto-generated"
                 />
@@ -217,7 +229,7 @@ export default function AddProductModal({
               type="text"
               value={formData.unit}
               onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               placeholder="pcs, kg, liter, etc."
               required
             />
@@ -273,7 +285,7 @@ export default function AddProductModal({
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               rows={2}
             />
           </div>

@@ -14,7 +14,18 @@ import {
   TrendingUp,
   AlertCircle,
   LogOut,
-  MapPin
+  MapPin,
+  BarChart3,
+  Receipt,
+  DollarSign,
+  FolderTree,
+  Truck,
+  ArrowLeftRight,
+  ShoppingBag,
+  CreditCard,
+  Calculator,
+  Gift,
+  Database
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -163,13 +174,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <button
             onClick={() => router.push('/pos')}
             className="bg-blue-600 text-white p-6 rounded-xl hover:bg-blue-700 transition-colors"
           >
             <ShoppingCart size={32} className="mb-2" />
             <p className="font-semibold">New Sale</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/categories')}
+            className="bg-yellow-600 text-white p-6 rounded-xl hover:bg-yellow-700 transition-colors"
+          >
+            <FolderTree size={32} className="mb-2" />
+            <p className="font-semibold">Categories</p>
           </button>
 
           <button
@@ -181,24 +200,96 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => router.push('/customers')}
+            onClick={() => router.push('/transactions')}
             className="bg-green-600 text-white p-6 rounded-xl hover:bg-green-700 transition-colors"
           >
-            <Users size={32} className="mb-2" />
-            <p className="font-semibold">Customers</p>
+            <Receipt size={32} className="mb-2" />
+            <p className="font-semibold">Transactions</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/reports')}
+            className="bg-orange-600 text-white p-6 rounded-xl hover:bg-orange-700 transition-colors"
+          >
+            <BarChart3 size={32} className="mb-2" />
+            <p className="font-semibold">Reports</p>
           </button>
 
           <button
             onClick={() => router.push('/inventory')}
-            className="bg-orange-600 text-white p-6 rounded-xl hover:bg-orange-700 transition-colors"
+            className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors"
           >
             <Warehouse size={32} className="mb-2" />
             <p className="font-semibold">Inventory</p>
           </button>
 
           <button
+            onClick={() => router.push('/stock-transfers')}
+            className="bg-violet-600 text-white p-6 rounded-xl hover:bg-violet-700 transition-colors"
+          >
+            <ArrowLeftRight size={32} className="mb-2" />
+            <p className="font-semibold">Stock Transfer</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/cash-session')}
+            className="bg-cyan-600 text-white p-6 rounded-xl hover:bg-cyan-700 transition-colors"
+          >
+            <DollarSign size={32} className="mb-2" />
+            <p className="font-semibold">Cash Session</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/promotions')}
+            className="bg-fuchsia-600 text-white p-6 rounded-xl hover:bg-fuchsia-700 transition-colors"
+          >
+            <Gift size={32} className="mb-2" />
+            <p className="font-semibold">Promotions</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/settings/tax')}
+            className="bg-sky-600 text-white p-6 rounded-xl hover:bg-sky-700 transition-colors"
+          >
+            <Calculator size={32} className="mb-2" />
+            <p className="font-semibold">Tax Settings</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/customers')}
+            className="bg-pink-600 text-white p-6 rounded-xl hover:bg-pink-700 transition-colors"
+          >
+            <Users size={32} className="mb-2" />
+            <p className="font-semibold">Customers</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/credits')}
+            className="bg-rose-600 text-white p-6 rounded-xl hover:bg-rose-700 transition-colors"
+          >
+            <CreditCard size={32} className="mb-2" />
+            <p className="font-semibold">Credits</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/suppliers')}
+            className="bg-emerald-600 text-white p-6 rounded-xl hover:bg-emerald-700 transition-colors"
+          >
+            <Truck size={32} className="mb-2" />
+            <p className="font-semibold">Suppliers</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/purchase-orders')}
+            className="bg-lime-600 text-white p-6 rounded-xl hover:bg-lime-700 transition-colors"
+          >
+            <ShoppingBag size={32} className="mb-2" />
+            <p className="font-semibold">Purchase Orders</p>
+          </button>
+
+          <button
             onClick={() => router.push('/employees')}
-            className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors"
+            className="bg-teal-600 text-white p-6 rounded-xl hover:bg-teal-700 transition-colors"
           >
             <Users size={32} className="mb-2" />
             <p className="font-semibold">Employees</p>
@@ -206,36 +297,44 @@ export default function DashboardPage() {
 
           <button
             onClick={() => router.push('/attendance-admin')}
-            className="bg-cyan-600 text-white p-6 rounded-xl hover:bg-cyan-700 transition-colors"
+            className="bg-amber-600 text-white p-6 rounded-xl hover:bg-amber-700 transition-colors"
           >
             <MapPin size={32} className="mb-2" />
-            <p className="font-semibold">Attendance Admin</p>
+            <p className="font-semibold">Attendance</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/backup')}
+            className="bg-red-600 text-white p-6 rounded-xl hover:bg-red-700 transition-colors"
+          >
+            <Database size={32} className="mb-2" />
+            <p className="font-semibold">Backup</p>
           </button>
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Transactions</h2>
+        <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-sm p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Recent Transactions</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Invoice</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Cashier</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Total</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Invoice</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Customer</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Cashier</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Total</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {dashboardData?.recentTransactions?.map((transaction: any) => (
-                  <tr key={transaction.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm">{transaction.invoiceNo}</td>
-                    <td className="py-3 px-4 text-sm">{transaction.customer?.name || 'Guest'}</td>
-                    <td className="py-3 px-4 text-sm">{transaction.cashier?.name}</td>
-                    <td className="py-3 px-4 text-sm font-semibold">{formatCurrency(transaction.total)}</td>
+                  <tr key={transaction.id} className="border-b border-gray-700 hover:bg-gray-700">
+                    <td className="py-3 px-4 text-sm text-gray-200">{transaction.invoiceNo}</td>
+                    <td className="py-3 px-4 text-sm text-gray-200">{transaction.customer?.name || 'Guest'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-200">{transaction.cashier?.name}</td>
+                    <td className="py-3 px-4 text-sm font-semibold text-white">{formatCurrency(transaction.total)}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                      <span className="px-2 py-1 text-xs rounded-full bg-green-900 text-green-300">
                         {transaction.status}
                       </span>
                     </td>

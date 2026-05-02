@@ -80,7 +80,7 @@ export default function OpenShiftModal({
                 type="number"
                 value={openAmount}
                 onChange={(e) => setOpenAmount(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-right text-lg font-semibold"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-right text-lg font-semibold text-gray-900 bg-white"
                 placeholder="0"
                 required
                 autoFocus

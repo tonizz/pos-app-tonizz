@@ -1,11 +1,14 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaNeon } from '@prisma/adapter-neon'
-import { Pool } from '@neondatabase/serverless'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_YgLuCh7w8dyS@ep-muddy-tree-ao4oslno-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
+const connectionString = process.env.DATABASE_URL
 
-const pool = new Pool({ connectionString })
-const adapter = new PrismaNeon(pool)
+const pool = new Pool({
+  connectionString,
+})
+
+const adapter = new PrismaPg(pool)
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
