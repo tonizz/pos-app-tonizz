@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { generateInvoiceNumber } from '@/lib/utils'
+import { sendEmail, generateReceiptEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -176,6 +177,21 @@ export async function POST(request: NextRequest) {
 
       return newTransaction
     })
+
+    // Send email receipt if customer has email
+    if (transaction.customer?.email) {
+      try {
+        const emailHtml = generateReceiptEmail(transaction)
+        await sendEmail({
+          to: transaction.customer.email,
+          subject: `Receipt - ${transaction.invoiceNo}`,
+          html: emailHtml
+        })
+      } catch (emailError) {
+        console.error('Failed to send email receipt:', emailError)
+        // Don't fail the transaction if email fails
+      }
+    }
 
     return NextResponse.json(transaction, { status: 201 })
   } catch (error: any) {
