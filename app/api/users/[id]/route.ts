@@ -7,9 +7,11 @@ import bcrypt from 'bcryptjs'
 // Get single user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -36,7 +38,7 @@ export async function GET(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -71,9 +73,10 @@ export async function GET(
 // Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -104,7 +107,7 @@ export async function PUT(
 
     // Get target user
     const targetUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!targetUser) {
@@ -175,7 +178,7 @@ export async function PUT(
 
     // Update user
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -218,9 +221,11 @@ export async function PUT(
 // Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -247,7 +252,7 @@ export async function DELETE(
     }
 
     // Cannot delete yourself
-    if (params.id === decoded.userId) {
+    if (id === decoded.userId) {
       return NextResponse.json(
         { error: 'Cannot delete yourself' },
         { status: 400 }
@@ -256,7 +261,7 @@ export async function DELETE(
 
     // Get target user
     const targetUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!targetUser) {
@@ -273,7 +278,7 @@ export async function DELETE(
 
     // Soft delete by setting isActive to false
     await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { isActive: false }
     })
 
@@ -283,7 +288,7 @@ export async function DELETE(
         userId: decoded.userId,
         action: 'DELETE',
         entity: 'User',
-        entityId: params.id,
+        entityId: id,
         details: `Deactivated user: ${targetUser.name} (${targetUser.role})`
       }
     })
