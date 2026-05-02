@@ -216,8 +216,16 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => router.push('/inventory')}
+            onClick={() => router.push('/analytics')}
             className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            <TrendingUp size={32} className="mb-2" />
+            <p className="font-semibold">Analytics</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/inventory')}
+            className="bg-violet-600 text-white p-6 rounded-xl hover:bg-violet-700 transition-colors"
           >
             <Warehouse size={32} className="mb-2" />
             <p className="font-semibold">Inventory</p>
