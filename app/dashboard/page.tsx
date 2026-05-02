@@ -25,7 +25,8 @@ import {
   CreditCard,
   Calculator,
   Gift,
-  Database
+  Database,
+  Settings
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -333,6 +334,14 @@ export default function DashboardPage() {
           >
             <Database size={32} className="mb-2" />
             <p className="font-semibold">Backup</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/settings')}
+            className="bg-gray-600 text-white p-6 rounded-xl hover:bg-gray-700 transition-colors"
+          >
+            <Settings size={32} className="mb-2" />
+            <p className="font-semibold">Settings</p>
           </button>
         </div>
 
