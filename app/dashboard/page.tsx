@@ -248,6 +248,14 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={() => router.push('/loyalty')}
+            className="bg-pink-600 text-white p-6 rounded-xl hover:bg-pink-700 transition-colors"
+          >
+            <Gift size={32} className="mb-2" />
+            <p className="font-semibold">Loyalty Program</p>
+          </button>
+
+          <button
             onClick={() => router.push('/settings/tax')}
             className="bg-sky-600 text-white p-6 rounded-xl hover:bg-sky-700 transition-colors"
           >
@@ -257,7 +265,7 @@ export default function DashboardPage() {
 
           <button
             onClick={() => router.push('/customers')}
-            className="bg-pink-600 text-white p-6 rounded-xl hover:bg-pink-700 transition-colors"
+            className="bg-slate-600 text-white p-6 rounded-xl hover:bg-slate-700 transition-colors"
           >
             <Users size={32} className="mb-2" />
             <p className="font-semibold">Customers</p>
