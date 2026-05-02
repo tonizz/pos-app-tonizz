@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     transactionItems.forEach(item => {
       const productId = item.productId
       const revenue = item.subtotal
-      const cost = item.product.costPrice * item.quantity
+      const cost = item.product.buyPrice * item.quantity
       const profit = revenue - cost
 
       if (!productAnalysis[productId]) {
