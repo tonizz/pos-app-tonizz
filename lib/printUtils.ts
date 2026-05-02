@@ -31,23 +31,48 @@ interface ReceiptData {
 }
 
 export const printReceipt = (data: ReceiptData) => {
-  const printWindow = window.open('', '_blank')
+  try {
+    const printWindow = window.open('', '_blank', 'width=300,height=600')
 
-  if (!printWindow) {
-    throw new Error('Please allow popups to print receipt')
-  }
+    if (!printWindow) {
+      // Fallback: print in same window
+      const html = generateReceiptHTML(data)
+      const printFrame = document.createElement('iframe')
+      printFrame.style.display = 'none'
+      document.body.appendChild(printFrame)
 
-  const html = generateReceiptHTML(data)
+      const doc = printFrame.contentWindow?.document
+      if (doc) {
+        doc.open()
+        doc.write(html)
+        doc.close()
 
-  printWindow.document.write(html)
-  printWindow.document.close()
+        printFrame.contentWindow?.focus()
+        printFrame.contentWindow?.print()
 
-  // Wait for content to load then print
-  printWindow.onload = () => {
-    printWindow.focus()
-    printWindow.print()
-    // Close after printing (optional)
-    // printWindow.close()
+        // Remove iframe after printing
+        setTimeout(() => {
+          document.body.removeChild(printFrame)
+        }, 1000)
+      }
+      return
+    }
+
+    const html = generateReceiptHTML(data)
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.focus()
+      printWindow.print()
+      // Close after printing (optional)
+      // printWindow.close()
+    }
+  } catch (error) {
+    console.error('Print error:', error)
+    throw new Error('Failed to open print window. Please check your browser popup settings.')
   }
 }
 

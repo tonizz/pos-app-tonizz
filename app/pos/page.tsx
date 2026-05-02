@@ -704,9 +704,10 @@ export default function POSPage() {
 
       // Use browser print (works for all printers including thermal)
       printReceipt(receiptData)
+      toast.success('Receipt sent to printer')
     } catch (error: any) {
       console.error('Print error:', error)
-      toast.error('Failed to print receipt')
+      toast.error(error.message || 'Failed to print receipt. Please check browser popup settings.')
     }
   }
 
