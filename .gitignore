@@ -52,3 +52,5 @@ next-env.d.ts
 
 # test files
 test-supabase-connection.js
+
+.vercel

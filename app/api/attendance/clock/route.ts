@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import cloudinary from '@/lib/cloudinary'
 
 // Clock In/Out
 export async function POST(request: NextRequest) {
@@ -89,22 +88,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save photo
+    // Upload photo to Cloudinary
     const bytes = await photo.arrayBuffer()
     const buffer = Buffer.from(bytes)
+    const base64Image = `data:${photo.type};base64,${buffer.toString('base64')}`
 
-    // Create uploads directory if not exists
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'attendance')
-    await mkdir(uploadsDir, { recursive: true })
+    const uploadResult = await cloudinary.uploader.upload(base64Image, {
+      folder: 'attendance',
+      public_id: `${decoded.userId}-${Date.now()}`,
+      resource_type: 'image'
+    })
 
-    // Generate filename
-    const timestamp = Date.now()
-    const filename = `${decoded.userId}-${timestamp}.jpg`
-    const filepath = path.join(uploadsDir, filename)
-
-    await writeFile(filepath, buffer)
-
-    const photoUrl = `/uploads/attendance/${filename}`
+    const photoUrl = uploadResult.secure_url
 
     // Create attendance record
     const attendance = await prisma.attendance.create({
