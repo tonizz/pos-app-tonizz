@@ -398,8 +398,8 @@ export default function AnalyticsPage() {
                         <p className="text-xs text-gray-400">{product.category}</p>
                       </div>
                       <div className="text-right ml-2">
-                        <p className="text-sm font-bold text-green-400">{formatCurrency(product.profit)}</p>
-                        <p className="text-xs text-gray-400">{product.profitMargin.toFixed(1)}%</p>
+                        <p className="text-sm font-bold text-green-400">{formatCurrency(product.profit || 0)}</p>
+                        <p className="text-xs text-gray-400">{(product.profitMargin || 0).toFixed(1)}%</p>
                       </div>
                     </div>
                   ))}
@@ -417,8 +417,8 @@ export default function AnalyticsPage() {
                         <p className="text-xs text-gray-400">{product.category}</p>
                       </div>
                       <div className="text-right ml-2">
-                        <p className="text-sm font-bold text-red-400">{product.profitMargin.toFixed(1)}%</p>
-                        <p className="text-xs text-gray-400">{formatCurrency(product.profit)}</p>
+                        <p className="text-sm font-bold text-red-400">{(product.profitMargin || 0).toFixed(1)}%</p>
+                        <p className="text-xs text-gray-400">{formatCurrency(product.profit || 0)}</p>
                       </div>
                     </div>
                   ))}
@@ -437,8 +437,8 @@ export default function AnalyticsPage() {
                       <p className="text-xs text-gray-400">{category.productCount} products • {category.quantitySold} sold</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-white">{formatCurrency(category.profit)}</p>
-                      <p className="text-sm text-green-400">{category.profitMargin.toFixed(1)}% margin</p>
+                      <p className="text-lg font-bold text-white">{formatCurrency(category.profit || 0)}</p>
+                      <p className="text-sm text-green-400">{(category.profitMargin || 0).toFixed(1)}% margin</p>
                     </div>
                   </div>
                 ))}
