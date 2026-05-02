@@ -270,6 +270,9 @@ model Customer {
   phone       String?       @unique
   email       String?
   address     String?
+  birthday    DateTime?
+  referralCode String?      @unique
+  referredBy  String?
   memberTier  MemberTier    @default(BRONZE)
   points      Int           @default(0)
   totalSpent  Float         @default(0)
@@ -281,6 +284,7 @@ model Customer {
   transactions Transaction[]
   creditTransactions CreditTransaction[]
   creditPayments CreditPayment[]
+  pointTransactions PointTransaction[]
 }
 
 enum MemberTier {
@@ -503,4 +507,24 @@ model TaxSetting {
 enum TaxType {
   INCLUSIVE  // Tax included in price (default for retail)
   EXCLUSIVE  // Tax added to price (for B2B)
+}
+
+// Loyalty Program Models
+model PointTransaction {
+  id          String              @id @default(uuid())
+  customerId  String
+  customer    Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type        PointTransactionType
+  points      Int
+  description String
+  reference   String?
+  createdAt   DateTime            @default(now())
+}
+
+enum PointTransactionType {
+  EARN        // Earned from purchase
+  REDEEM      // Redeemed for discount
+  BONUS       // Birthday/referral bonus
+  EXPIRE      // Points expired
+  ADJUST      // Manual adjustment
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { generateReferralCode } from '@/lib/loyalty'
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, phone, email, address, memberTier } = body
+    const { name, phone, email, address, memberTier, birthday } = body
 
     if (!name) {
       return NextResponse.json(
@@ -67,12 +68,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate unique referral code
+    const referralCode = await generateReferralCode(name)
+
     const customer = await prisma.customer.create({
       data: {
         name,
         phone,
         email,
         address,
+        birthday: birthday ? new Date(birthday) : null,
+        referralCode,
         memberTier: memberTier || 'BRONZE'
       }
     })

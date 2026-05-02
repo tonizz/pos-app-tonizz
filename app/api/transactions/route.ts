@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { generateInvoiceNumber } from '@/lib/utils'
 import { sendEmail, generateReceiptEmail } from '@/lib/email'
+import { calculatePoints, addPoints, updateMemberTier, checkBirthdayBonus } from '@/lib/loyalty'
 
 export async function POST(request: NextRequest) {
   try {
@@ -156,13 +157,33 @@ export async function POST(request: NextRequest) {
       }
 
       if (customerId) {
+        // Update total spent
         await tx.customer.update({
           where: { id: customerId },
           data: {
-            totalSpent: { increment: total },
-            points: { increment: Math.floor(total / 10000) }
+            totalSpent: { increment: total }
           }
         })
+
+        // Calculate and add points
+        const earnedPoints = calculatePoints(total)
+        if (earnedPoints > 0) {
+          await tx.customer.update({
+            where: { id: customerId },
+            data: { points: { increment: earnedPoints } }
+          })
+
+          // Create point transaction record
+          await tx.pointTransaction.create({
+            data: {
+              customerId,
+              type: 'EARN',
+              points: earnedPoints,
+              description: `Earned ${earnedPoints} points from purchase`,
+              reference: invoiceNo
+            }
+          })
+        }
       }
 
       await tx.auditLog.create({
@@ -177,6 +198,14 @@ export async function POST(request: NextRequest) {
 
       return newTransaction
     })
+
+    // Update member tier based on new total spent
+    if (customerId) {
+      await updateMemberTier(customerId)
+
+      // Check and give birthday bonus if applicable
+      await checkBirthdayBonus(customerId)
+    }
 
     // Send email receipt if customer has email
     if (transaction.customer?.email) {
