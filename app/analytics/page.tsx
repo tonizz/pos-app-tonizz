@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Sales Trends & Forecast */}
-        {salesTrends && (
+        {salesTrends && salesTrends.summary && (
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
@@ -116,8 +116,8 @@ export default function AnalyticsPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-400">Growth Rate</p>
-                <p className={`text-2xl font-bold ${parseFloat(salesTrends.summary.growthRate) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {salesTrends.summary.growthRate}%
+                <p className={`text-2xl font-bold ${parseFloat(salesTrends.summary.growthRate || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {salesTrends.summary.growthRate || '0.00'}%
                 </p>
               </div>
             </div>
@@ -125,25 +125,26 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Sales</p>
-                <p className="text-xl font-bold text-white">{formatCurrency(salesTrends.summary.totalSales)}</p>
+                <p className="text-xl font-bold text-white">{formatCurrency(salesTrends.summary.totalSales || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Avg Daily Sales</p>
-                <p className="text-xl font-bold text-white">{formatCurrency(salesTrends.summary.avgDailySales)}</p>
+                <p className="text-xl font-bold text-white">{formatCurrency(salesTrends.summary.avgDailySales || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Transactions</p>
-                <p className="text-xl font-bold text-white">{salesTrends.summary.totalTransactions}</p>
+                <p className="text-xl font-bold text-white">{salesTrends.summary.totalTransactions || 0}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Avg Transaction</p>
                 <p className="text-xl font-bold text-white">
-                  {formatCurrency(salesTrends.summary.totalSales / salesTrends.summary.totalTransactions || 0)}
+                  {formatCurrency((salesTrends.summary.totalSales || 0) / (salesTrends.summary.totalTransactions || 1))}
                 </p>
               </div>
             </div>
 
             {/* Forecast */}
+            {salesTrends.forecast && salesTrends.forecast.length > 0 && (
             <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-400 mb-3">7-Day Forecast</h3>
               <div className="grid grid-cols-7 gap-2">
@@ -153,18 +154,19 @@ export default function AnalyticsPage() {
                       {new Date(day.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                     </p>
                     <p className="text-sm font-semibold text-white">
-                      {formatCurrency(day.predictedTotal)}
+                      {formatCurrency(day.predictedTotal || 0)}
                     </p>
-                    <p className="text-xs text-gray-500">{(day.confidence * 100).toFixed(0)}%</p>
+                    <p className="text-xs text-gray-500">{((day.confidence || 0) * 100).toFixed(0)}%</p>
                   </div>
                 ))}
               </div>
             </div>
+            )}
           </div>
         )}
 
         {/* Peak Hours & Days */}
-        {peakHours && (
+        {peakHours && peakHours.insights && (
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
               <div className="flex items-center space-x-3 mb-6">
@@ -175,18 +177,18 @@ export default function AnalyticsPage() {
               <div className="space-y-4 mb-6">
                 <div className="bg-green-900/30 border border-green-800 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Busiest Hour</p>
-                  <p className="text-2xl font-bold text-green-400">{peakHours.insights.peakHour.hour}</p>
-                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.peakHour.total)} • {peakHours.insights.peakHour.transactions} transactions</p>
+                  <p className="text-2xl font-bold text-green-400">{peakHours.insights.peakHour?.hour || 'N/A'}</p>
+                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.peakHour?.total || 0)} • {peakHours.insights.peakHour?.transactions || 0} transactions</p>
                 </div>
                 <div className="bg-red-900/30 border border-red-800 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Slowest Hour</p>
-                  <p className="text-2xl font-bold text-red-400">{peakHours.insights.slowestHour.hour}</p>
-                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.slowestHour.total)} • {peakHours.insights.slowestHour.transactions} transactions</p>
+                  <p className="text-2xl font-bold text-red-400">{peakHours.insights.slowestHour?.hour || 'N/A'}</p>
+                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.slowestHour?.total || 0)} • {peakHours.insights.slowestHour?.transactions || 0} transactions</p>
                 </div>
               </div>
 
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {peakHours.hourlyData
+                {peakHours.hourlyData && peakHours.hourlyData
                   .filter((h: any) => h.count > 0)
                   .sort((a: any, b: any) => b.total - a.total)
                   .slice(0, 10)
@@ -194,8 +196,8 @@ export default function AnalyticsPage() {
                     <div key={hour.hour} className="flex items-center justify-between p-2 bg-gray-700 rounded">
                       <span className="text-sm text-gray-300">{hour.hourLabel}</span>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-white">{formatCurrency(hour.total)}</p>
-                        <p className="text-xs text-gray-500">{hour.count} trans</p>
+                        <p className="text-sm font-semibold text-white">{formatCurrency(hour.total || 0)}</p>
+                        <p className="text-xs text-gray-500">{hour.count || 0} trans</p>
                       </div>
                     </div>
                   ))}
@@ -211,25 +213,25 @@ export default function AnalyticsPage() {
               <div className="space-y-4 mb-6">
                 <div className="bg-green-900/30 border border-green-800 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Busiest Day</p>
-                  <p className="text-2xl font-bold text-green-400">{peakHours.insights.peakDay.day}</p>
-                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.peakDay.total)} • {peakHours.insights.peakDay.transactions} transactions</p>
+                  <p className="text-2xl font-bold text-green-400">{peakHours.insights.peakDay?.day || 'N/A'}</p>
+                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.peakDay?.total || 0)} • {peakHours.insights.peakDay?.transactions || 0} transactions</p>
                 </div>
                 <div className="bg-red-900/30 border border-red-800 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Slowest Day</p>
-                  <p className="text-2xl font-bold text-red-400">{peakHours.insights.slowestDay.day}</p>
-                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.slowestDay.total)} • {peakHours.insights.slowestDay.transactions} transactions</p>
+                  <p className="text-2xl font-bold text-red-400">{peakHours.insights.slowestDay?.day || 'N/A'}</p>
+                  <p className="text-sm text-gray-400">{formatCurrency(peakHours.insights.slowestDay?.total || 0)} • {peakHours.insights.slowestDay?.transactions || 0} transactions</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                {peakHours.dailyData
+                {peakHours.dailyData && peakHours.dailyData
                   .sort((a: any, b: any) => b.total - a.total)
                   .map((day: any) => (
                     <div key={day.day} className="flex items-center justify-between p-2 bg-gray-700 rounded">
                       <span className="text-sm text-gray-300">{day.dayName}</span>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-white">{formatCurrency(day.total)}</p>
-                        <p className="text-xs text-gray-500">{day.count} trans</p>
+                        <p className="text-sm font-semibold text-white">{formatCurrency(day.total || 0)}</p>
+                        <p className="text-xs text-gray-500">{day.count || 0} trans</p>
                       </div>
                     </div>
                   ))}
@@ -239,7 +241,7 @@ export default function AnalyticsPage() {
         )}
 
         {/* Customer Patterns */}
-        {customerPatterns && (
+        {customerPatterns && customerPatterns.summary && (
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
             <div className="flex items-center space-x-3 mb-6">
               <Users className="w-6 h-6 text-pink-400" />
@@ -249,43 +251,47 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Customers</p>
-                <p className="text-2xl font-bold text-white">{customerPatterns.summary.totalCustomers}</p>
+                <p className="text-2xl font-bold text-white">{customerPatterns.summary.totalCustomers || 0}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">VIP Customers</p>
-                <p className="text-2xl font-bold text-purple-400">{customerPatterns.summary.vipCustomers}</p>
+                <p className="text-2xl font-bold text-purple-400">{customerPatterns.summary.vipCustomers || 0}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Avg Order Value</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(customerPatterns.summary.avgOrderValue)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(customerPatterns.summary.avgOrderValue || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Avg Transactions</p>
-                <p className="text-2xl font-bold text-white">{customerPatterns.summary.avgTransactionsPerCustomer.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-white">{(customerPatterns.summary.avgTransactionsPerCustomer || 0).toFixed(1)}</p>
               </div>
             </div>
 
             {/* RFM Segments */}
+            {customerPatterns.segments && (
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="bg-yellow-900/30 border border-yellow-800 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-400 mb-1">Champions</p>
-                <p className="text-3xl font-bold text-yellow-400">{customerPatterns.segments.champions}</p>
+                <p className="text-3xl font-bold text-yellow-400">{customerPatterns.segments.champions || 0}</p>
               </div>
               <div className="bg-green-900/30 border border-green-800 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-400 mb-1">Loyal</p>
-                <p className="text-3xl font-bold text-green-400">{customerPatterns.segments.loyal}</p>
+                <p className="text-3xl font-bold text-green-400">{customerPatterns.segments.loyal || 0}</p>
               </div>
               <div className="bg-blue-900/30 border border-blue-800 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-400 mb-1">Potential</p>
-                <p className="text-3xl font-bold text-blue-400">{customerPatterns.segments.potential}</p>
+                <p className="text-3xl font-bold text-blue-400">{customerPatterns.segments.potential || 0}</p>
               </div>
               <div className="bg-red-900/30 border border-red-800 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-400 mb-1">At Risk</p>
-                <p className="text-3xl font-bold text-red-400">{customerPatterns.segments.atRisk}</p>
+                <p className="text-3xl font-bold text-red-400">{customerPatterns.segments.atRisk || 0}</p>
               </div>
             </div>
+            )}
 
             {/* Top Customers */}
+            {customerPatterns.topCustomers && customerPatterns.topCustomers.length > 0 && (
+            <>
             <h3 className="text-sm font-semibold text-gray-400 mb-3">Top 10 Customers</h3>
             <div className="space-y-2">
               {customerPatterns.topCustomers.map((customer: any, index: number) => (
@@ -294,21 +300,23 @@ export default function AnalyticsPage() {
                     <span className="text-lg font-bold text-gray-500">#{index + 1}</span>
                     <div>
                       <p className="font-semibold text-white">{customer.name}</p>
-                      <p className="text-xs text-gray-400">{customer.totalTransactions} transactions • {customer.memberTier}</p>
+                      <p className="text-xs text-gray-400">{customer.totalTransactions || 0} transactions • {customer.memberTier}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-white">{formatCurrency(customer.totalSpent)}</p>
-                    <p className="text-xs text-gray-400">Avg: {formatCurrency(customer.avgOrderValue)}</p>
+                    <p className="text-lg font-bold text-white">{formatCurrency(customer.totalSpent || 0)}</p>
+                    <p className="text-xs text-gray-400">Avg: {formatCurrency(customer.avgOrderValue || 0)}</p>
                   </div>
                 </div>
               ))}
             </div>
+            </>
+            )}
           </div>
         )}
 
         {/* Product Correlation */}
-        {productCorrelation && (
+        {productCorrelation && productCorrelation.summary && (
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
             <div className="flex items-center space-x-3 mb-6">
               <ShoppingBag className="w-6 h-6 text-cyan-400" />
@@ -318,49 +326,53 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Product Pairs</p>
-                <p className="text-2xl font-bold text-white">{productCorrelation.summary.totalProductPairs}</p>
+                <p className="text-2xl font-bold text-white">{productCorrelation.summary.totalProductPairs || 0}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Avg Items/Transaction</p>
-                <p className="text-2xl font-bold text-white">{productCorrelation.summary.avgItemsPerTransaction.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-white">{(productCorrelation.summary.avgItemsPerTransaction || 0).toFixed(1)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Transactions</p>
-                <p className="text-2xl font-bold text-white">{productCorrelation.summary.totalTransactions}</p>
+                <p className="text-2xl font-bold text-white">{productCorrelation.summary.totalTransactions || 0}</p>
               </div>
             </div>
 
+            {productCorrelation.correlations && productCorrelation.correlations.length > 0 && (
+            <>
             <h3 className="text-sm font-semibold text-gray-400 mb-3">Top Product Combinations</h3>
             <div className="space-y-2">
               {productCorrelation.correlations.slice(0, 10).map((pair: any, index: number) => (
                 <div key={index} className="p-3 bg-gray-700 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-white">{pair.product1.name}</p>
+                      <p className="text-sm font-semibold text-white">{pair.product1?.name || 'Unknown'}</p>
                       <p className="text-xs text-gray-400">+</p>
-                      <p className="text-sm font-semibold text-white">{pair.product2.name}</p>
+                      <p className="text-sm font-semibold text-white">{pair.product2?.name || 'Unknown'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-cyan-400">{(pair.confidence * 100).toFixed(1)}%</p>
-                      <p className="text-xs text-gray-400">{pair.count} times</p>
+                      <p className="text-sm font-bold text-cyan-400">{((pair.confidence || 0) * 100).toFixed(1)}%</p>
+                      <p className="text-xs text-gray-400">{pair.count || 0} times</p>
                     </div>
                   </div>
                   <div className="flex space-x-2 text-xs">
                     <span className="px-2 py-1 bg-gray-600 rounded text-gray-300">
-                      Support: {(pair.support * 100).toFixed(1)}%
+                      Support: {((pair.support || 0) * 100).toFixed(1)}%
                     </span>
                     <span className="px-2 py-1 bg-gray-600 rounded text-gray-300">
-                      Lift: {pair.lift.toFixed(2)}x
+                      Lift: {(pair.lift || 0).toFixed(2)}x
                     </span>
                   </div>
                 </div>
               ))}
             </div>
+            </>
+            )}
           </div>
         )}
 
         {/* Profit Margin Analysis */}
-        {profitMargin && (
+        {profitMargin && profitMargin.summary && (
           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
             <div className="flex items-center space-x-3 mb-6">
               <DollarSign className="w-6 h-6 text-green-400" />
@@ -370,24 +382,25 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Revenue</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(profitMargin.summary.totalRevenue)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(profitMargin.summary.totalRevenue || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Cost</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(profitMargin.summary.totalCost)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(profitMargin.summary.totalCost || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Total Profit</p>
-                <p className="text-2xl font-bold text-green-400">{formatCurrency(profitMargin.summary.totalProfit)}</p>
+                <p className="text-2xl font-bold text-green-400">{formatCurrency(profitMargin.summary.totalProfit || 0)}</p>
               </div>
               <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                 <p className="text-sm text-gray-400 mb-1">Overall Margin</p>
-                <p className="text-2xl font-bold text-green-400">{profitMargin.summary.overallMargin}%</p>
+                <p className="text-2xl font-bold text-green-400">{profitMargin.summary.overallMargin || '0.00'}%</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               {/* Top by Profit */}
+              {profitMargin.topByProfit && profitMargin.topByProfit.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-400 mb-3">Top 10 by Profit</h3>
                 <div className="space-y-2">
@@ -405,8 +418,10 @@ export default function AnalyticsPage() {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Low Margin Products */}
+              {profitMargin.lowMarginProducts && profitMargin.lowMarginProducts.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-400 mb-3">Low Margin Products (Need Attention)</h3>
                 <div className="space-y-2">
@@ -424,9 +439,11 @@ export default function AnalyticsPage() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Category Profitability */}
+            {profitMargin.categoryProfitability && profitMargin.categoryProfitability.length > 0 && (
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-gray-400 mb-3">Profitability by Category</h3>
               <div className="space-y-2">
@@ -434,7 +451,7 @@ export default function AnalyticsPage() {
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                     <div>
                       <p className="font-semibold text-white">{category.category}</p>
-                      <p className="text-xs text-gray-400">{category.productCount} products • {category.quantitySold} sold</p>
+                      <p className="text-xs text-gray-400">{category.productCount || 0} products • {category.quantitySold || 0} sold</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-white">{formatCurrency(category.profit || 0)}</p>
@@ -444,6 +461,7 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             </div>
+            )}
           </div>
         )}
       </div>
