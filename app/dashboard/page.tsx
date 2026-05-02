@@ -312,6 +312,14 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={() => router.push('/users')}
+            className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            <Users size={32} className="mb-2" />
+            <p className="font-semibold">User Management</p>
+          </button>
+
+          <button
             onClick={() => router.push('/attendance-admin')}
             className="bg-amber-600 text-white p-6 rounded-xl hover:bg-amber-700 transition-colors"
           >
