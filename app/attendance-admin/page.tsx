@@ -97,6 +97,8 @@ export default function AttendanceAdminPage() {
       }
 
       const data = await response.json()
+      console.log('Sales locations data:', data)
+      console.log('First sales attendance:', data[0]?.attendance)
       setSalesLocations(data)
       setError('')
     } catch (err: any) {
