@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { MapPin, Clock, Users, LogOut } from 'lucide-react'
+import { MapPin, Clock, Users, LogOut, Camera } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import PhotoModal from './PhotoModal'
 
 const MapComponent = dynamic(() => import('./MapComponent'), {
   ssr: false,
@@ -53,6 +54,15 @@ export default function AttendanceAdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [photoModal, setPhotoModal] = useState<{
+    isOpen: boolean
+    photoUrl: string
+    metadata: any
+  }>({
+    isOpen: false,
+    photoUrl: '',
+    metadata: null
+  })
 
   useEffect(() => {
     setMounted(true)
@@ -162,6 +172,22 @@ export default function AttendanceAdminPage() {
   const handleLogout = () => {
     logout()
     router.push('/login')
+  }
+
+  const openPhotoModal = (photoUrl: string, metadata: any) => {
+    setPhotoModal({
+      isOpen: true,
+      photoUrl,
+      metadata
+    })
+  }
+
+  const closePhotoModal = () => {
+    setPhotoModal({
+      isOpen: false,
+      photoUrl: '',
+      metadata: null
+    })
   }
 
   if (loading) {
@@ -305,6 +331,29 @@ export default function AttendanceAdminPage() {
                             {sales.attendance.clockIn.address && (
                               <div className="text-gray-500 truncate mt-1">{sales.attendance.clockIn.address}</div>
                             )}
+                            {sales.attendance.clockIn.photo && (
+                              <div className="mt-2">
+                                <img
+                                  src={sales.attendance.clockIn.photo}
+                                  alt="Clock In"
+                                  className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-green-200"
+                                  onClick={() => openPhotoModal(sales.attendance.clockIn.photo, {
+                                    userName: sales.user.name,
+                                    userNrp: sales.user.nrp,
+                                    type: 'CLOCK_IN',
+                                    timestamp: sales.attendance.clockIn.createdAt,
+                                    address: sales.attendance.clockIn.address,
+                                    latitude: sales.attendance.clockIn.latitude,
+                                    longitude: sales.attendance.clockIn.longitude
+                                  })}
+                                  title="Click to view full size"
+                                />
+                                <div className="flex items-center gap-1 mt-1 text-gray-400">
+                                  <Camera size={10} />
+                                  <span className="text-[10px]">Click to enlarge</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -313,6 +362,29 @@ export default function AttendanceAdminPage() {
                             <div className="text-gray-700 font-medium">Out: {formatTime(sales.attendance.clockOut.createdAt)}</div>
                             {sales.attendance.clockOut.address && (
                               <div className="text-gray-500 truncate mt-1">{sales.attendance.clockOut.address}</div>
+                            )}
+                            {sales.attendance.clockOut.photo && (
+                              <div className="mt-2">
+                                <img
+                                  src={sales.attendance.clockOut.photo}
+                                  alt="Clock Out"
+                                  className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity border-2 border-blue-200"
+                                  onClick={() => openPhotoModal(sales.attendance.clockOut.photo, {
+                                    userName: sales.user.name,
+                                    userNrp: sales.user.nrp,
+                                    type: 'CLOCK_OUT',
+                                    timestamp: sales.attendance.clockOut.createdAt,
+                                    address: sales.attendance.clockOut.address,
+                                    latitude: sales.attendance.clockOut.latitude,
+                                    longitude: sales.attendance.clockOut.longitude
+                                  })}
+                                  title="Click to view full size"
+                                />
+                                <div className="flex items-center gap-1 mt-1 text-gray-400">
+                                  <Camera size={10} />
+                                  <span className="text-[10px]">Click to enlarge</span>
+                                </div>
+                              </div>
                             )}
                           </div>
                         )}
@@ -345,6 +417,16 @@ export default function AttendanceAdminPage() {
           </div>
         </div>
       </div>
+
+      {/* Photo Modal */}
+      {photoModal.metadata && (
+        <PhotoModal
+          isOpen={photoModal.isOpen}
+          onClose={closePhotoModal}
+          photoUrl={photoModal.photoUrl}
+          metadata={photoModal.metadata}
+        />
+      )}
     </div>
   )
 }
