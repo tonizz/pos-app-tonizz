@@ -424,6 +424,7 @@ export default function AttendanceAdminPage() {
                           </div>
                         )}
 
+                        {sales.location && (
                           <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                             <MapPin size={12} />
                             Last seen: {formatLastUpdate(sales.location.createdAt)}
