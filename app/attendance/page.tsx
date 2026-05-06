@@ -199,7 +199,6 @@ export default function AttendancePage() {
     setStep('submitting')
     setError('')
 
-    const clockType = hasClockIn ? 'CLOCK_OUT' : 'CLOCK_IN'
     const form = new FormData()
     form.append('type', clockType)
     form.append('latitude', String(location.lat))
