@@ -36,6 +36,14 @@ export async function POST(request: NextRequest) {
     const longitude = parseFloat(formData.get('longitude') as string)
     const address = formData.get('address') as string
     const photo = formData.get('photo') as File
+    const deviceTimeStr = formData.get('deviceTime') as string
+    
+    let createdAtTime: Date
+    if (deviceTimeStr) {
+      createdAtTime = new Date(deviceTimeStr)
+    } else {
+      createdAtTime = new Date()
+    }
 
     if (!type || !latitude || !longitude || !photo) {
       return NextResponse.json(
@@ -110,6 +118,7 @@ export async function POST(request: NextRequest) {
         latitude,
         longitude,
         address: address || null,
+        createdAt: createdAtTime,
       },
       include: {
         user: {
