@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const attendanceWithPhotos = await prisma.attendance.findMany({
       where: {
         photo: {
-          not: null
+          not: undefined
         }
       },
       take: 10,
