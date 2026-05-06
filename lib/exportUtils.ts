@@ -399,6 +399,39 @@ export const exportCustomersToExcel = (customers: any[]) => {
   XLSX.writeFile(wb, filename)
 }
 
+// Export Attendance to Excel
+export const exportAttendanceToExcel = (salesLocations: any[], date: string) => {
+  const rows = salesLocations.map(s => {
+    const ci = s.attendance.clockIn
+    const co = s.attendance.clockOut
+    let duration = '-'
+    if (ci && co) {
+      const diff = new Date(co.createdAt).getTime() - new Date(ci.createdAt).getTime()
+      const h = Math.floor(diff / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      duration = `${h}j ${m}m`
+    }
+    return {
+      'Nama': s.user.name,
+      'NRP': s.user.nrp || '-',
+      'Jabatan': s.user.position || '-',
+      'Departemen': s.user.department || '-',
+      'Tanggal': date,
+      'Jam Masuk': ci ? new Date(ci.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-',
+      'Lokasi Masuk': ci?.address || '-',
+      'Jam Keluar': co ? new Date(co.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-',
+      'Lokasi Keluar': co?.address || '-',
+      'Durasi Kerja': duration,
+      'Status': s.attendance.status === 'CLOCKED_OUT' ? 'Hadir' : s.attendance.status === 'CLOCKED_IN' ? 'Belum Keluar' : 'Tidak Hadir',
+    }
+  })
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Absensi')
+  XLSX.writeFile(wb, `absensi-${date}.xlsx`)
+}
+
 // Export Customers to CSV
 export const exportCustomersToCSV = (customers: any[]) => {
   const data = customers.map(c => ({

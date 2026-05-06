@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, MapPin, Clock, CheckCircle, LogOut, RotateCcw } from 'lucide-react'
+import { Camera, MapPin, Clock, CheckCircle, LogOut, RotateCcw, History } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 type AttendanceRecord = {
@@ -26,6 +26,8 @@ export default function AttendancePage() {
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null)
   const [locError, setLocError] = useState('')
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([])
+  const [history, setHistory] = useState<AttendanceRecord[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const [error, setError] = useState('')
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
 
@@ -33,6 +35,7 @@ export default function AttendancePage() {
     if (!isAuthenticated()) { router.push('/login'); return }
     if (user?.role !== 'SALES') { router.push('/dashboard'); return }
     fetchToday()
+    fetchHistory()
     getLocation()
   }, [])
 
@@ -44,6 +47,26 @@ export default function AttendancePage() {
       if (res.ok) {
         const data = await res.json()
         setTodayAttendance(Array.isArray(data) ? data : (data.attendance || []))
+      }
+    } catch {}
+  }
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/attendance/history', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        // Last 7 days excluding today
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        const today = new Date(); today.setHours(0,0,0,0)
+        const filtered = (Array.isArray(data) ? data : []).filter((r: AttendanceRecord) => {
+          const d = new Date(r.createdAt)
+          return d >= sevenDaysAgo && d < today
+        })
+        setHistory(filtered)
       }
     } catch {}
   }
@@ -164,6 +187,15 @@ export default function AttendancePage() {
 
   const submit = async () => {
     if (!capturedBlob || !location) return
+
+    const clockType = hasClockIn ? 'CLOCK_OUT' : 'CLOCK_IN'
+
+    // Konfirmasi sebelum clock out
+    if (clockType === 'CLOCK_OUT') {
+      const confirmed = window.confirm('Yakin ingin Clock Out sekarang?')
+      if (!confirmed) return
+    }
+
     setStep('submitting')
     setError('')
 
@@ -198,6 +230,27 @@ export default function AttendancePage() {
 
   const formatTime = (d: string) =>
     new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short' })
+
+  // Group history by date
+  const historyByDay = history.reduce((acc, r) => {
+    const day = new Date(r.createdAt).toDateString()
+    if (!acc[day]) acc[day] = []
+    acc[day].push(r)
+    return acc
+  }, {} as Record<string, AttendanceRecord[]>)
+
+  const calcDuration = (records: AttendanceRecord[]) => {
+    const ci = records.find(r => r.type === 'CLOCK_IN')
+    const co = records.find(r => r.type === 'CLOCK_OUT')
+    if (!ci || !co) return null
+    const diff = new Date(co.createdAt).getTime() - new Date(ci.createdAt).getTime()
+    const h = Math.floor(diff / 3600000)
+    const m = Math.floor((diff % 3600000) / 60000)
+    return `${h}j ${m}m`
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -337,6 +390,40 @@ export default function AttendancePage() {
             <button onClick={() => setStep('idle')} className="mt-4 text-sm text-blue-600 underline">
               Lihat status
             </button>
+          </div>
+        )}
+
+        {/* Riwayat 7 hari */}
+        {history.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowHistory(v => !v)}
+              className="w-full p-4 flex items-center justify-between text-left"
+            >
+              <span className="font-semibold text-gray-700 flex items-center gap-2">
+                <History size={16} /> Riwayat 7 Hari
+              </span>
+              <span className="text-gray-400 text-sm">{showHistory ? '▲' : '▼'}</span>
+            </button>
+            {showHistory && (
+              <div className="divide-y divide-gray-100">
+                {Object.entries(historyByDay).map(([day, records]) => {
+                  const ci = records.find(r => r.type === 'CLOCK_IN')
+                  const co = records.find(r => r.type === 'CLOCK_OUT')
+                  const dur = calcDuration(records)
+                  return (
+                    <div key={day} className="px-4 py-3 text-sm">
+                      <div className="font-medium text-gray-700">{formatDate(records[0].createdAt)}</div>
+                      <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                        <span>In: <span className="text-green-600 font-medium">{ci ? formatTime(ci.createdAt) : '-'}</span></span>
+                        <span>Out: <span className="text-blue-600 font-medium">{co ? formatTime(co.createdAt) : '-'}</span></span>
+                        {dur && <span className="text-purple-600 font-medium">{dur}</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

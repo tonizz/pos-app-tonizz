@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { MapPin, Clock, Users, LogOut, Camera } from 'lucide-react'
+import { MapPin, Clock, Users, LogOut, Camera, Download } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import PhotoModal from './PhotoModal'
+import { exportAttendanceToExcel } from '@/lib/exportUtils'
 
 const MapComponent = dynamic(() => import('./MapComponent'), {
   ssr: false,
@@ -54,6 +55,7 @@ export default function AttendanceAdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [photoModal, setPhotoModal] = useState<{
     isOpen: boolean
     photoUrl: string
@@ -85,7 +87,7 @@ export default function AttendanceAdminPage() {
         return
       }
 
-      const response = await fetch('/api/admin/sales-locations', {
+      const response = await fetch(`/api/admin/sales-locations?date=${selectedDate}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -123,7 +125,7 @@ export default function AttendanceAdminPage() {
     const interval = setInterval(fetchSalesLocations, 30000)
 
     return () => clearInterval(interval)
-  }, [token, isAuthenticated, mounted])
+  }, [token, isAuthenticated, mounted, selectedDate])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -169,6 +171,14 @@ export default function AttendanceAdminPage() {
     const diffHours = Math.floor(diffMins / 60)
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     return date.toLocaleDateString('id-ID')
+  }
+
+  const formatDuration = (clockIn: any, clockOut: any) => {
+    if (!clockIn || !clockOut) return null
+    const diffMs = new Date(clockOut.createdAt).getTime() - new Date(clockIn.createdAt).getTime()
+    const h = Math.floor(diffMs / 3600000)
+    const m = Math.floor((diffMs % 3600000) / 60000)
+    return `${h}j ${m}m`
   }
 
   const handleLogout = () => {
@@ -217,13 +227,29 @@ export default function AttendanceAdminPage() {
               <h1 className="text-2xl font-bold text-gray-900">Attendance Monitoring System</h1>
               <p className="text-sm text-gray-600 mt-1">Real-time sales team location tracking</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              <LogOut size={18} />
-              Logout
-            </button>
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                value={selectedDate}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={() => exportAttendanceToExcel(salesLocations, selectedDate)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              >
+                <Download size={16} />
+                Export Excel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -391,7 +417,13 @@ export default function AttendanceAdminPage() {
                           </div>
                         )}
 
-                        {sales.location && (
+                        {formatDuration(sales.attendance.clockIn, sales.attendance.clockOut) && (
+                          <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded text-xs text-purple-700 font-medium">
+                            <Clock size={10} />
+                            Durasi: {formatDuration(sales.attendance.clockIn, sales.attendance.clockOut)}
+                          </div>
+                        )}
+
                           <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                             <MapPin size={12} />
                             Last seen: {formatLastUpdate(sales.location.createdAt)}

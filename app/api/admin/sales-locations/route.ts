@@ -44,6 +44,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Support optional date filter ?date=YYYY-MM-DD
+    const { searchParams } = new URL(request.url)
+    const dateParam = searchParams.get('date')
+    const targetDate = dateParam ? new Date(dateParam) : new Date()
+    const dayStart = new Date(targetDate)
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(targetDate)
+    dayEnd.setHours(23, 59, 59, 999)
+
     // Get latest location for each sales user
     const salesLocations = await Promise.all(
       salesUsers.map(async (sales) => {
@@ -55,9 +64,7 @@ export async function GET(request: NextRequest) {
         const todayAttendance = await prisma.attendance.findMany({
           where: {
             userId: sales.id,
-            createdAt: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0))
-            }
+            createdAt: { gte: dayStart, lte: dayEnd }
           },
           orderBy: { createdAt: 'asc' }
         })
