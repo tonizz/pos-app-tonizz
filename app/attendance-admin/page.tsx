@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { MapPin, Clock, Users, LogOut, Camera, Download } from 'lucide-react'
+import { MapPin, Clock, Users, LogOut, Camera, Download, Store, Route } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import PhotoModal from './PhotoModal'
 import { exportAttendanceToExcel } from '@/lib/exportUtils'
@@ -56,6 +56,9 @@ export default function AttendanceAdminPage() {
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [activeTab, setActiveTab] = useState<'attendance' | 'visits'>('attendance')
+  const [visits, setVisits] = useState<any[]>([])
+  const [visitsLoading, setVisitsLoading] = useState(false)
   const [photoModal, setPhotoModal] = useState<{
     isOpen: boolean
     photoUrl: string
@@ -71,6 +74,29 @@ export default function AttendanceAdminPage() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const getToken = () => {
+    const authStorage = localStorage.getItem('auth-storage')
+    if (!authStorage) return null
+    const { state } = JSON.parse(authStorage)
+    return state?.token || null
+  }
+
+  const fetchVisits = async () => {
+    setVisitsLoading(true)
+    try {
+      const token = getToken()
+      if (!token) return
+      const res = await fetch(`/api/visits?date=${selectedDate}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) setVisits(await res.json())
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setVisitsLoading(false)
+    }
+  }
 
   const fetchSalesLocations = async () => {
     try {
@@ -128,6 +154,11 @@ export default function AttendanceAdminPage() {
 
     return () => clearInterval(interval)
   }, [token, isAuthenticated, mounted, selectedDate])
+
+  useEffect(() => {
+    if (!mounted || !isAuthenticated()) return
+    if (activeTab === 'visits') fetchVisits()
+  }, [activeTab, selectedDate, mounted])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -314,12 +345,44 @@ export default function AttendanceAdminPage() {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'attendance'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Clock size={16} />
+            Absensi
+          </button>
+          <button
+            onClick={() => setActiveTab('visits')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'visits'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Store size={16} />
+            Kunjungan Toko
+            {visits.length > 0 && (
+              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                {visits.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
           </div>
         )}
 
+        {activeTab === 'attendance' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map */}
           <div className="lg:col-span-2">
@@ -459,6 +522,89 @@ export default function AttendanceAdminPage() {
             </div>
           </div>
         </div>
+        )} {/* end attendance tab */}
+
+        {activeTab === 'visits' && (
+          <div>
+            {visitsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : visits.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">
+                <Store size={64} className="mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">Belum ada kunjungan toko</p>
+                <p className="text-sm mt-1">Kunjungan akan muncul setelah sales melakukan check-in dari APK</p>
+              </div>
+            ) : (
+              <>
+                {/* Summary per sales */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3">Ringkasan per Sales</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(
+                      visits.reduce((acc: any, v: any) => {
+                        const name = v.user?.name || 'Unknown'
+                        acc[name] = (acc[name] || 0) + 1
+                        return acc
+                      }, {})
+                    ).map(([name, count]) => (
+                      <div key={name} className="bg-white rounded-lg border border-gray-200 p-3">
+                        <p className="text-xs text-gray-500 truncate">{name}</p>
+                        <p className="text-2xl font-bold text-blue-600">{count as number}</p>
+                        <p className="text-xs text-gray-400">toko</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Visit cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visits.map((visit: any, i: number) => (
+                    <div key={visit.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                      {visit.photoUrl && (
+                        <img
+                          src={visit.photoUrl}
+                          alt={visit.storeName}
+                          className="w-full h-40 object-cover"
+                        />
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                #{i + 1}
+                              </span>
+                              <h4 className="font-semibold text-gray-900">{visit.storeName}</h4>
+                            </div>
+                            <p className="text-xs text-blue-600 font-medium mt-1">{visit.user?.name}</p>
+                            {visit.user?.nrp && (
+                              <p className="text-xs text-gray-400">NRP: {visit.user.nrp}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                            {new Date(visit.visitTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {visit.storeAddress && (
+                          <div className="flex items-start gap-1 mt-2">
+                            <MapPin size={12} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-gray-500 line-clamp-2">{visit.storeAddress}</p>
+                          </div>
+                        )}
+                        {visit.notes && (
+                          <p className="text-xs text-gray-600 mt-2 bg-gray-50 rounded p-2">{visit.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Photo Modal */}

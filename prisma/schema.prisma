@@ -39,6 +39,8 @@ model User {
   approvedDiscounts Transaction[] @relation("DiscountApprover")
   attendances  Attendance[]
   locations    Location[]
+  storeVisits  StoreVisit[]
+  routePoints  RoutePoint[]
 }
 
 enum Role {
@@ -497,6 +499,30 @@ model Location {
   latitude  Float
   longitude Float
   accuracy  Float?
+  createdAt DateTime @default(now())
+}
+
+model StoreVisit {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  storeName    String
+  storeAddress String?
+  latitude     Float
+  longitude    Float
+  photoUrl     String?
+  notes        String?
+  visitTime    DateTime
+  createdAt    DateTime @default(now())
+}
+
+model RoutePoint {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  latitude  Float
+  longitude Float
+  recordedAt DateTime
   createdAt DateTime @default(now())
 }
 
