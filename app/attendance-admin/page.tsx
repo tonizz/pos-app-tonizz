@@ -60,10 +60,12 @@ export default function AttendanceAdminPage() {
     isOpen: boolean
     photoUrl: string
     metadata: any
+    attendanceId?: string
   }>({
     isOpen: false,
     photoUrl: '',
-    metadata: null
+    metadata: null,
+    attendanceId: undefined
   })
 
   useEffect(() => {
@@ -186,11 +188,12 @@ export default function AttendanceAdminPage() {
     router.push('/login')
   }
 
-  const openPhotoModal = (photoUrl: string, metadata: any) => {
+  const openPhotoModal = (photoUrl: string, metadata: any, attendanceId?: string) => {
     setPhotoModal({
       isOpen: true,
       photoUrl,
-      metadata
+      metadata,
+      attendanceId
     })
   }
 
@@ -198,8 +201,13 @@ export default function AttendanceAdminPage() {
     setPhotoModal({
       isOpen: false,
       photoUrl: '',
-      metadata: null
+      metadata: null,
+      attendanceId: undefined
     })
+  }
+
+  const handlePhotoDeleted = () => {
+    fetchSalesLocations()
   }
 
   if (loading) {
@@ -373,7 +381,7 @@ export default function AttendanceAdminPage() {
                                     address: sales.attendance.clockIn.address,
                                     latitude: sales.attendance.clockIn.latitude,
                                     longitude: sales.attendance.clockIn.longitude
-                                  })}
+                                  }, sales.attendance.clockIn.id)}
                                   title="Click to view full size"
                                 />
                                 <div className="flex items-center gap-1 mt-1 text-gray-400">
@@ -405,7 +413,7 @@ export default function AttendanceAdminPage() {
                                     address: sales.attendance.clockOut.address,
                                     latitude: sales.attendance.clockOut.latitude,
                                     longitude: sales.attendance.clockOut.longitude
-                                  })}
+                                  }, sales.attendance.clockOut.id)}
                                   title="Click to view full size"
                                 />
                                 <div className="flex items-center gap-1 mt-1 text-gray-400">
@@ -459,7 +467,9 @@ export default function AttendanceAdminPage() {
           isOpen={photoModal.isOpen}
           onClose={closePhotoModal}
           photoUrl={photoModal.photoUrl}
+          attendanceId={photoModal.attendanceId}
           metadata={photoModal.metadata}
+          onPhotoDeleted={handlePhotoDeleted}
         />
       )}
     </div>

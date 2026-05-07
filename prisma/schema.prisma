@@ -477,7 +477,7 @@ model Attendance {
   userId      String
   user        User           @relation(fields: [userId], references: [id])
   type        AttendanceType
-  photo       String         // URL to selfie photo
+  photo       String?        // URL to selfie photo (nullable for deletion)
   latitude    Float
   longitude   Float
   address     String?

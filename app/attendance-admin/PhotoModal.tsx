@@ -1,12 +1,14 @@
 'use client'
 
-import { X, Download, MapPin, Clock, User } from 'lucide-react'
-import { useEffect } from 'react'
+import { X, Download, MapPin, Clock, User, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useAuthStore } from '../store/authStore'
 
 interface PhotoModalProps {
   isOpen: boolean
   onClose: () => void
   photoUrl: string
+  attendanceId?: string
   metadata: {
     userName: string
     userNrp?: string
@@ -16,9 +18,13 @@ interface PhotoModalProps {
     latitude?: number
     longitude?: number
   }
+  onPhotoDeleted?: () => void
 }
 
-export default function PhotoModal({ isOpen, onClose, photoUrl, metadata }: PhotoModalProps) {
+export default function PhotoModal({ isOpen, onClose, photoUrl, attendanceId, metadata, onPhotoDeleted }: PhotoModalProps) {
+  const { token } = useAuthStore()
+  const [isDeleting, setIsDeleting] = useState(false)
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -67,6 +73,42 @@ export default function PhotoModal({ isOpen, onClose, photoUrl, metadata }: Phot
     }
   }
 
+  const handleDeletePhoto = async () => {
+    if (!attendanceId) {
+      alert('Attendance ID not found')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Yakin ingin menghapus foto ${metadata.type === 'CLOCK_IN' ? 'Clock In' : 'Clock Out'} ${metadata.userName}?\n\nTindakan ini tidak dapat dibatalkan.`
+    )
+
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/attendance/${attendanceId}/photo`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete photo')
+      }
+
+      alert('Foto berhasil dihapus')
+      onPhotoDeleted?.()
+      onClose()
+    } catch (error: any) {
+      alert(error.message || 'Gagal menghapus foto')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-75 backdrop-blur-sm">
       <div className="relative bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
@@ -93,6 +135,16 @@ export default function PhotoModal({ isOpen, onClose, photoUrl, metadata }: Phot
             >
               <Download size={20} className="text-gray-700" />
             </button>
+            {attendanceId && (
+              <button
+                onClick={handleDeletePhoto}
+                disabled={isDeleting}
+                className="p-2 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                title="Delete Photo"
+              >
+                <Trash2 size={20} className="text-red-600" />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
