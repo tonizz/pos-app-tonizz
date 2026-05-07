@@ -52,10 +52,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check today's attendance
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
+    // Check today's attendance using WIB timezone (UTC+7)
+    const WIB_OFFSET = 7 * 60 * 60 * 1000
+    const refTime = createdAtTime.getTime() + WIB_OFFSET
+    const refWIB = new Date(refTime)
+    const todayStr = refWIB.toISOString().slice(0, 10) // YYYY-MM-DD in WIB
+    const today = new Date(`${todayStr}T00:00:00+07:00`)
+    const tomorrow = new Date(`${todayStr}T00:00:00+07:00`)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     const todayAttendance = await prisma.attendance.findMany({

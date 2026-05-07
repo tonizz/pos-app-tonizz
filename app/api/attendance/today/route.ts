@@ -16,9 +16,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
+    const WIB_OFFSET = 7 * 60 * 60 * 1000
+    const nowWIB = new Date(Date.now() + WIB_OFFSET)
+    const todayStr = nowWIB.toISOString().slice(0, 10) // YYYY-MM-DD in WIB
+    const today = new Date(`${todayStr}T00:00:00+07:00`)
+    const tomorrow = new Date(`${todayStr}T00:00:00+07:00`)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     const attendance = await prisma.attendance.findMany({
