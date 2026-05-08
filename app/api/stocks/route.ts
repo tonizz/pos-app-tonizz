@@ -38,13 +38,36 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' }
     })
 
-    const lowStockItems = stocks.filter(stock => stock.quantity <= stock.minStock)
+    // Hitung reserved stock dari transfer PENDING/IN_TRANSIT
+    const pendingTransfers = await prisma.stockTransfer.findMany({
+      where: {
+        fromWarehouseId: warehouseId ? warehouseId : undefined,
+        status: { in: ['PENDING', 'IN_TRANSIT'] }
+      },
+      include: { items: true }
+    })
+
+    const reservedMap: Record<string, number> = {}
+    for (const transfer of pendingTransfers) {
+      for (const item of transfer.items) {
+        const key = `${item.productId}_${transfer.fromWarehouseId}`
+        reservedMap[key] = (reservedMap[key] || 0) + item.quantity
+      }
+    }
+
+    const stocksWithReserved = stocks.map(s => ({
+      ...s,
+      reserved: reservedMap[`${s.productId}_${s.warehouseId}`] || 0,
+      available: s.quantity - (reservedMap[`${s.productId}_${s.warehouseId}`] || 0)
+    }))
+
+    const lowStockItems = stocksWithReserved.filter(stock => stock.available <= stock.minStock)
 
     return NextResponse.json({
-      stocks,
+      stocks: stocksWithReserved,
       lowStockItems,
       summary: {
-        totalItems: stocks.length,
+        totalItems: stocksWithReserved.length,
         lowStockCount: lowStockItems.length
       }
     })

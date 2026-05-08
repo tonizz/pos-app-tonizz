@@ -14,7 +14,8 @@ import {
   Search,
   Filter,
   TrendingUp,
-  X
+  X,
+  History
 } from 'lucide-react'
 
 export default function InventoryPage() {
@@ -39,6 +40,9 @@ export default function InventoryPage() {
     minStock: '',
     expiredDate: ''
   })
+  const [activeTab, setActiveTab] = useState<'stock' | 'movements'>('stock')
+  const [movements, setMovements] = useState<any[]>([])
+  const [movementsLoading, setMovementsLoading] = useState(false)
 
   useEffect(() => {
       if (!_hasHydrated) return
@@ -54,6 +58,10 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchStocks()
   }, [selectedWarehouse])
+
+  useEffect(() => {
+    if (activeTab === 'movements') fetchMovements()
+  }, [activeTab, selectedWarehouse])
 
   const fetchWarehouses = async () => {
     try {
@@ -76,6 +84,20 @@ export default function InventoryPage() {
       setProducts(data.products || [])
     } catch (error) {
       toast.error('Failed to fetch products')
+    }
+  }
+
+  const fetchMovements = async () => {
+    setMovementsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (selectedWarehouse) params.append('warehouseId', selectedWarehouse)
+      const res = await fetch(`/api/stocks/movements?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) setMovements(await res.json())
+    } finally {
+      setMovementsLoading(false)
     }
   }
 
@@ -471,6 +493,26 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('stock')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'stock' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            <Package size={16} /> Stok Saat Ini
+          </button>
+          <button
+            onClick={() => setActiveTab('movements')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'movements' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            <History size={16} /> Riwayat Mutasi
+          </button>
+        </div>
+
         {/* Filters */}
         <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -501,6 +543,8 @@ export default function InventoryPage() {
         </div>
 
         {/* Stock Table */}
+        {activeTab === 'stock' && (
+        <>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -522,6 +566,8 @@ export default function InventoryPage() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Category</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Warehouse</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Stock</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Reserved</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Tersedia</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Min Stock</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Value</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Status</th>
@@ -556,6 +602,17 @@ export default function InventoryPage() {
                         <td className="py-3 px-4">
                           <span className={`text-sm font-semibold ${isLowStock ? 'text-red-400' : 'text-white'}`}>
                             {stock.quantity} {stock.product?.unit}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm">
+                          {stock.reserved > 0
+                            ? <span className="text-yellow-400 font-medium">{stock.reserved} {stock.product?.unit}</span>
+                            : <span className="text-gray-600">—</span>
+                          }
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-sm font-semibold ${stock.available <= stock.minStock ? 'text-red-400' : 'text-green-400'}`}>
+                            {stock.available} {stock.product?.unit}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-400">{stock.minStock}</td>
@@ -609,6 +666,75 @@ export default function InventoryPage() {
               </span>
             )}
           </div>
+        )}
+        </>
+        )} {/* end tab stock */}
+
+        {/* Movements Tab */}
+        {activeTab === 'movements' && (
+          <>
+          {movementsLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+            </div>
+          ) : movements.length === 0 ? (
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-12 text-center">
+              <History size={64} className="mx-auto text-gray-600 mb-4" />
+              <p className="text-gray-400">Belum ada riwayat mutasi stok</p>
+            </div>
+          ) : (
+            <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-900 border-b border-gray-700">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Waktu</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Produk</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Gudang</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Tipe</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-300">Qty</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Referensi</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-300">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((m: any) => {
+                    const typeColors: Record<string, string> = {
+                      IN: 'bg-green-900 text-green-300',
+                      OUT: 'bg-red-900 text-red-300',
+                      TRANSFER: 'bg-blue-900 text-blue-300',
+                      ADJUSTMENT: 'bg-yellow-900 text-yellow-300',
+                      RETURN: 'bg-purple-900 text-purple-300',
+                    }
+                    return (
+                      <tr key={m.id} className="border-b border-gray-700 hover:bg-gray-700">
+                        <td className="py-3 px-4 text-xs text-gray-400">
+                          {new Date(m.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="text-sm font-medium text-white">{m.stock?.product?.name}</p>
+                          <p className="text-xs text-gray-400">{m.stock?.product?.sku}</p>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-300">{m.stock?.warehouse?.name}</td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${typeColors[m.type] || 'bg-gray-700 text-gray-300'}`}>
+                            {m.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className={`text-sm font-bold ${m.quantity > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {m.quantity > 0 ? '+' : ''}{m.quantity} {m.stock?.product?.unit}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-gray-400">{m.reference || '—'}</td>
+                        <td className="py-3 px-4 text-xs text-gray-400">{m.notes || '—'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
