@@ -390,6 +390,9 @@ model Transaction {
   changeAmount Float       @default(0)
   status       TransactionStatus @default(COMPLETED)
   notes        String?
+  jurnalSynced Boolean  @default(false)
+  jurnalId     String?
+  jurnalError  String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

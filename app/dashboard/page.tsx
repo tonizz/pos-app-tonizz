@@ -353,6 +353,14 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={() => router.push('/jurnal-sync')}
+            className="bg-teal-600 text-white p-6 rounded-xl hover:bg-teal-700 transition-colors"
+          >
+            <Receipt size={32} className="mb-2" />
+            <p className="font-semibold">Jurnal Sync</p>
+          </button>
+
+          <button
             onClick={() => router.push('/backup')}
             className="bg-red-600 text-white p-6 rounded-xl hover:bg-red-700 transition-colors"
           >

@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { generateInvoiceNumber } from '@/lib/utils'
 import { sendEmail, generateReceiptEmail } from '@/lib/email'
 import { calculatePoints, addPoints, updateMemberTier, checkBirthdayBonus } from '@/lib/loyalty'
+import { createSalesInvoice, transactionToJurnalPayload } from '@/lib/jurnal'
 
 export async function POST(request: NextRequest) {
   try {
@@ -218,8 +219,29 @@ export async function POST(request: NextRequest) {
         })
       } catch (emailError) {
         console.error('Failed to send email receipt:', emailError)
-        // Don't fail the transaction if email fails
       }
+    }
+
+    // Sync ke Jurnal.id (non-blocking, tidak gagalkan transaksi)
+    if (process.env.JURNAL_CLIENT_ID && process.env.JURNAL_CLIENT_SECRET) {
+      setImmediate(async () => {
+        try {
+          const payload = transactionToJurnalPayload(transaction)
+          const result = await createSalesInvoice(payload)
+          await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              jurnalSynced: true,
+              jurnalId: String(result?.sales_invoice?.id ?? result?.id ?? ''),
+            }
+          })
+        } catch (err: any) {
+          await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: { jurnalError: err.message?.slice(0, 500) }
+          }).catch(() => {})
+        }
+      })
     }
 
     return NextResponse.json(transaction, { status: 201 })
