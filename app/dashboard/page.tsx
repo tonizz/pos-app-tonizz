@@ -26,7 +26,8 @@ import {
   Calculator,
   Gift,
   Database,
-  Settings
+  Settings,
+  Shield
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -318,13 +319,30 @@ export default function DashboardPage() {
             <p className="font-semibold">Employees</p>
           </button>
 
-          <button
-            onClick={() => router.push('/users')}
-            className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors"
-          >
-            <Users size={32} className="mb-2" />
-            <p className="font-semibold">User Management</p>
-          </button>
+          <div className="relative group">
+            <button
+              className="bg-indigo-600 text-white p-6 rounded-xl hover:bg-indigo-700 transition-colors w-full"
+            >
+              <Users size={32} className="mb-2 mx-auto" />
+              <p className="font-semibold">User Management</p>
+            </button>
+            <div className="absolute z-10 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-xl shadow-lg w-full top-full mt-1 overflow-hidden">
+              <button
+                onClick={() => router.push('/users')}
+                className="px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 font-medium flex items-center gap-2"
+              >
+                <Users size={16} />
+                Daftar Pengguna
+              </button>
+              <button
+                onClick={() => router.push('/registrations')}
+                className="px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 font-medium flex items-center gap-2 border-t border-gray-100"
+              >
+                <Shield size={16} />
+                Approval Registrasi
+              </button>
+            </div>
+          </div>
 
           <button
             onClick={() => router.push('/attendance-admin')}
