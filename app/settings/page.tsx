@@ -8,7 +8,7 @@ import { Settings as SettingsIcon, Store, Gift, Receipt, ArrowLeft, Save } from 
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('store')
@@ -44,12 +44,13 @@ export default function SettingsPage() {
   })
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchSettings()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchSettings()
+    }, [, _hasHydrated])
 
   const fetchSettings = async () => {
     try {

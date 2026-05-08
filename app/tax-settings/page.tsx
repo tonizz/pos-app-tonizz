@@ -27,7 +27,7 @@ interface TaxSetting {
 
 export default function TaxSettingsPage() {
   const router = useRouter()
-  const { token, user, isAuthenticated } = useAuthStore()
+  const { token, user, isAuthenticated, _hasHydrated } = useAuthStore()
   const [taxSettings, setTaxSettings] = useState<TaxSetting[]>([])
   const [activeTax, setActiveTax] = useState<TaxSetting | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,20 +50,20 @@ export default function TaxSettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-
-    // Check permission
-    if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(user?.role || '')) {
-      toast.error('You do not have permission to access this page')
-      router.push('/dashboard')
-      return
-    }
-
-    fetchTaxSettings()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      // Check permission
+      if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(user?.role || '')) {
+        toast.error('You do not have permission to access this page')
+        router.push('/dashboard')
+        return
+      }
+  
+      fetchTaxSettings()
+    }, [, _hasHydrated])
 
   const fetchTaxSettings = async () => {
     try {

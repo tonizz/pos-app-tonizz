@@ -22,19 +22,20 @@ interface Employee {
 
 export default function EmployeesPage() {
   const router = useRouter()
-  const { token, isAuthenticated, logout } = useAuthStore()
+  const { token, isAuthenticated, logout, _hasHydrated } = useAuthStore()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState('ALL')
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchEmployees()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchEmployees()
+    }, [, _hasHydrated])
 
   const fetchEmployees = async () => {
     try {

@@ -52,7 +52,7 @@ interface Product {
 
 export default function PurchaseOrdersPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
@@ -75,15 +75,16 @@ export default function PurchaseOrdersPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchSuppliers()
-    fetchWarehouses()
-    fetchProducts()
-    fetchPurchaseOrders()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchSuppliers()
+      fetchWarehouses()
+      fetchProducts()
+      fetchPurchaseOrders()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     fetchPurchaseOrders()

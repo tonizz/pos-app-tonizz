@@ -15,7 +15,7 @@ type AttendanceRecord = {
 
 export default function AttendancePage() {
   const router = useRouter()
-  const { user, token, logout, isAuthenticated } = useAuthStore()
+  const { user, token, logout, isAuthenticated, _hasHydrated } = useAuthStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -32,12 +32,16 @@ export default function AttendancePage() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
 
   useEffect(() => {
-    if (!isAuthenticated()) { router.push('/login'); return }
-    if (user?.role !== 'SALES') { router.push('/dashboard'); return }
-    fetchToday()
-    fetchHistory()
-    getLocation()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      if (user?.role !== 'SALES') { router.push('/dashboard'); return }
+      fetchToday()
+      fetchHistory()
+      getLocation()
+    }, [, _hasHydrated])
 
   const fetchToday = async () => {
     try {

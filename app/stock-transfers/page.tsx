@@ -39,7 +39,7 @@ interface Product {
 
 export default function StockTransfersPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [transfers, setTransfers] = useState<StockTransfer[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -60,14 +60,15 @@ export default function StockTransfersPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchWarehouses()
-    fetchProducts()
-    fetchTransfers()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchWarehouses()
+      fetchProducts()
+      fetchTransfers()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     fetchTransfers()

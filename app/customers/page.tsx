@@ -9,18 +9,19 @@ import { Users, Plus, Edit, Trash2, Search, ArrowLeft, Award } from 'lucide-reac
 
 export default function CustomersPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchCustomers()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchCustomers()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     const delaySearch = setTimeout(() => {

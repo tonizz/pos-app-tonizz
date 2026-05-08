@@ -20,7 +20,7 @@ import {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('30')
 
@@ -31,12 +31,13 @@ export default function AnalyticsPage() {
   const [profitMargin, setProfitMargin] = useState<any>(null)
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchAllAnalytics()
-  }, [period])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchAllAnalytics()
+    }, [period, _hasHydrated])
 
   const fetchAllAnalytics = async () => {
     setLoading(true)

@@ -21,7 +21,7 @@ interface User {
 
 export default function UsersPage() {
   const router = useRouter()
-  const { token, user, isAuthenticated } = useAuthStore()
+  const { token, user, isAuthenticated, _hasHydrated } = useAuthStore()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -43,12 +43,13 @@ export default function UsersPage() {
   })
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchUsers()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchUsers()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     const delaySearch = setTimeout(() => {

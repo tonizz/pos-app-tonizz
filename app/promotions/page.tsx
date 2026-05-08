@@ -34,7 +34,7 @@ interface Promotion {
 
 export default function PromotionsPage() {
   const router = useRouter()
-  const { token, user, isAuthenticated } = useAuthStore()
+  const { token, user, isAuthenticated, _hasHydrated } = useAuthStore()
   const [promotions, setPromotions] = useState<Promotion[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -60,20 +60,20 @@ export default function PromotionsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-
-    // Check permission
-    if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(user?.role || '')) {
-      toast.error('You do not have permission to access this page')
-      router.push('/dashboard')
-      return
-    }
-
-    fetchPromotions()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      // Check permission
+      if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(user?.role || '')) {
+        toast.error('You do not have permission to access this page')
+        router.push('/dashboard')
+        return
+      }
+  
+      fetchPromotions()
+    }, [, _hasHydrated])
 
   const fetchPromotions = async () => {
     try {

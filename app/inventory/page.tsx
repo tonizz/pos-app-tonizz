@@ -19,7 +19,7 @@ import {
 
 export default function InventoryPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [stocks, setStocks] = useState<any[]>([])
   const [warehouses, setWarehouses] = useState<any[]>([])
   const [products, setProducts] = useState<any[]>([])
@@ -41,14 +41,15 @@ export default function InventoryPage() {
   })
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchWarehouses()
-    fetchProducts()
-    fetchStocks()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchWarehouses()
+      fetchProducts()
+      fetchStocks()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     fetchStocks()

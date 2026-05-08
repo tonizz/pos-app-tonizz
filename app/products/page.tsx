@@ -12,7 +12,7 @@ import BarcodeScanner from '../components/BarcodeScanner'
 
 export default function ProductsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [products, setProducts] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,13 +30,14 @@ export default function ProductsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchCategories()
-    fetchProducts()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchCategories()
+      fetchProducts()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     const delaySearch = setTimeout(() => {

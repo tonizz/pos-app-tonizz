@@ -31,18 +31,24 @@ import {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, token, logout, isAuthenticated } = useAuthStore()
+  const { user, token, logout, isAuthenticated, _hasHydrated } = useAuthStore()
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('today')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     if (!isAuthenticated()) {
       router.push('/login')
       return
     }
     fetchDashboardData()
-  }, [period])
+  }, [period, mounted])
 
   const fetchDashboardData = async () => {
     try {

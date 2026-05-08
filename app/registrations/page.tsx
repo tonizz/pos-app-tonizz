@@ -20,7 +20,7 @@ interface Registration {
 
 export default function RegistrationsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [list, setList] = useState<Registration[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending')
@@ -39,9 +39,13 @@ export default function RegistrationsPage() {
   }
 
   useEffect(() => {
-    if (!isAuthenticated()) { router.push('/login'); return }
-    fetchList()
-  }, [filter, token])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchList()
+    }, [filter, token, _hasHydrated])
 
   const handleAction = async (userId: string, action: 'approve' | 'reject', name: string) => {
     setProcessing(userId)

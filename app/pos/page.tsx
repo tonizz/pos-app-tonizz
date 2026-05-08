@@ -15,7 +15,7 @@ import BarcodeScanner from '../components/BarcodeScanner'
 
 export default function POSPage() {
   const router = useRouter()
-  const { token, user, isAuthenticated } = useAuthStore()
+  const { token, user, isAuthenticated, _hasHydrated } = useAuthStore()
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotal, getSubtotal, discount, setDiscount } = useCartStore()
 
   const [products, setProducts] = useState<any[]>([])
@@ -56,16 +56,17 @@ export default function POSPage() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchActiveShift()
-    fetchWarehouses()
-    fetchProducts()
-    fetchActivePromotions()
-    fetchActiveTax()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchActiveShift()
+      fetchWarehouses()
+      fetchProducts()
+      fetchActivePromotions()
+      fetchActiveTax()
+    }, [, _hasHydrated])
 
   // Auto-check promotions when cart changes
   useEffect(() => {

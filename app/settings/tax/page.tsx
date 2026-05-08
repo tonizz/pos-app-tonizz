@@ -8,7 +8,7 @@ import { Calculator, ArrowLeft, Save, Info } from 'lucide-react'
 
 export default function TaxSettingsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [taxRate, setTaxRate] = useState('0')
@@ -20,12 +20,13 @@ export default function TaxSettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchTaxSettings()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchTaxSettings()
+    }, [, _hasHydrated])
 
   const fetchTaxSettings = async () => {
     try {

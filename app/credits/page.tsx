@@ -38,7 +38,7 @@ interface Customer {
 
 export default function CreditsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [credits, setCredits] = useState<CreditTransaction[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,13 +66,14 @@ export default function CreditsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchCustomers()
-    fetchCredits()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchCustomers()
+      fetchCredits()
+    }, [, _hasHydrated])
 
   useEffect(() => {
     fetchCredits()

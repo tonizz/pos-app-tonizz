@@ -64,7 +64,7 @@ interface Transaction {
 
 export default function TransactionsPage() {
   const router = useRouter()
-  const { token, isAuthenticated, user } = useAuthStore()
+  const { token, isAuthenticated, user, _hasHydrated } = useAuthStore()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -80,19 +80,19 @@ export default function TransactionsPage() {
   })
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-
-    // Set default date range (last 30 days)
-    const today = new Date()
-    const thirtyDaysAgo = new Date(today)
-    thirtyDaysAgo.setDate(today.getDate() - 30)
-
-    setEndDate(today.toISOString().split('T')[0])
-    setStartDate(thirtyDaysAgo.toISOString().split('T')[0])
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      // Set default date range (last 30 days)
+      const today = new Date()
+      const thirtyDaysAgo = new Date(today)
+      thirtyDaysAgo.setDate(today.getDate() - 30)
+  
+      setEndDate(today.toISOString().split('T')[0])
+      setStartDate(thirtyDaysAgo.toISOString().split('T')[0])
+    }, [, _hasHydrated])
 
   useEffect(() => {
     if (startDate && endDate) {

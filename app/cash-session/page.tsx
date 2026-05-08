@@ -39,7 +39,7 @@ interface CashSession {
 
 export default function CashSessionPage() {
   const router = useRouter()
-  const { token, isAuthenticated, user } = useAuthStore()
+  const { token, isAuthenticated, user, _hasHydrated } = useAuthStore()
   const [activeShift, setActiveShift] = useState<CashSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [showOpenModal, setShowOpenModal] = useState(false)
@@ -49,12 +49,13 @@ export default function CashSessionPage() {
   const [closeNotes, setCloseNotes] = useState('')
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-      return
-    }
-    fetchActiveShift()
-  }, [])
+      if (!_hasHydrated) return
+      if (!isAuthenticated()) {
+        router.push('/login')
+        return
+      }
+      fetchActiveShift()
+    }, [, _hasHydrated])
 
   const fetchActiveShift = async () => {
     try {

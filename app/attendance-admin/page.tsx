@@ -50,7 +50,7 @@ interface SalesLocation {
 
 export default function AttendanceAdminPage() {
   const router = useRouter()
-  const { token, isAuthenticated, logout } = useAuthStore()
+  const { token, isAuthenticated, logout, _hasHydrated } = useAuthStore()
   const [salesLocations, setSalesLocations] = useState<SalesLocation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -140,7 +140,7 @@ export default function AttendanceAdminPage() {
   }
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || !_hasHydrated) return
 
     if (!isAuthenticated()) {
       router.push('/login')
@@ -153,10 +153,10 @@ export default function AttendanceAdminPage() {
     const interval = setInterval(fetchSalesLocations, 30000)
 
     return () => clearInterval(interval)
-  }, [token, isAuthenticated, mounted, selectedDate])
+  }, [token, isAuthenticated, mounted, selectedDate, _hasHydrated])
 
   useEffect(() => {
-    if (!mounted || !isAuthenticated()) return
+    if (!mounted || !_hasHydrated || !isAuthenticated()) return
     if (activeTab === 'visits') fetchVisits()
   }, [activeTab, selectedDate, mounted])
 

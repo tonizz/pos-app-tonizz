@@ -77,7 +77,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export default function ReportsPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [startDate, setStartDate] = useState('')
@@ -89,6 +89,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     setMounted(true)
+    if (!_hasHydrated) return
     if (!isAuthenticated()) {
       router.push('/login')
       return
@@ -103,7 +104,7 @@ export default function ReportsPage() {
     setStartDate(thirtyDaysAgo.toISOString().split('T')[0])
 
     fetchWarehouses()
-  }, [])
+  }, [_hasHydrated])
 
   useEffect(() => {
     if (startDate && endDate) {

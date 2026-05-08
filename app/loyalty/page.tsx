@@ -40,7 +40,7 @@ interface LoyaltySummary {
 
 export default function LoyaltyPage() {
   const router = useRouter()
-  const { token, isAuthenticated } = useAuthStore()
+  const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [loyaltySummary, setLoyaltySummary] = useState<LoyaltySummary | null>(null)
