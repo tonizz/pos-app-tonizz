@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
       prisma.product.findMany({
         where,
         include: {
-          category: true,
+          category: {
+            include: { parent: true }
+          },
           stocks: {
             include: {
               warehouse: true

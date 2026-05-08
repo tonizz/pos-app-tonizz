@@ -318,7 +318,12 @@ export default function ProductsPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-300">{product.sku}</td>
-                        <td className="py-3 px-4 text-sm text-gray-400">{product.category?.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-400">
+                          {product.category?.parent
+                            ? <span>{product.category.parent.name} <span className="text-gray-600">›</span> {product.category.name}</span>
+                            : product.category?.name
+                          }
+                        </td>
                         <td className="py-3 px-4 text-sm text-gray-400">{formatCurrency(product.buyPrice)}</td>
                         <td className="py-3 px-4 text-sm font-semibold text-white">{formatCurrency(product.sellPrice)}</td>
                         <td className="py-3 px-4">
