@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (user.isApproved === false) {
+      return NextResponse.json(
+        { error: 'Akun Anda belum disetujui admin. Silakan tunggu konfirmasi.' },
+        { status: 403 }
+      )
+    }
+
     const isValidPassword = await verifyPassword(password, user.password)
 
     if (!isValidPassword) {

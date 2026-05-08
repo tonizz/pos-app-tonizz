@@ -1,61 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, generateToken } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email, password, name, role } = body
+    const { name, nrp, email, password, position, phone } = await request.json()
 
-    if (!email || !password || !name) {
-      return NextResponse.json(
-        { error: 'Email, password, and name are required' },
-        { status: 400 }
-      )
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Nama, email, dan password wajib diisi' }, { status: 400 })
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 400 }
-      )
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+      return NextResponse.json({ error: 'Email sudah terdaftar' }, { status: 409 })
     }
 
-    const hashedPassword = await hashPassword(password)
+    if (nrp) {
+      const existingNrp = await prisma.user.findUnique({ where: { nrp } })
+      if (existingNrp) {
+        return NextResponse.json({ error: 'NRP sudah terdaftar' }, { status: 409 })
+      }
+    }
 
-    const user = await prisma.user.create({
+    const hashed = await bcrypt.hash(password, 10)
+
+    await prisma.user.create({
       data: {
-        email,
-        password: hashedPassword,
         name,
-        role: role || 'CASHIER'
+        email,
+        password: hashed,
+        role: 'SALES',
+        nrp: nrp || null,
+        position: position || null,
+        phone: phone || null,
+        isApproved: false, // pending approval
+        isActive: false,
       }
     })
 
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    })
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      },
-      token
-    })
-  } catch (error) {
-    console.error('Register error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { message: 'Registrasi berhasil. Menunggu persetujuan admin.' },
+      { status: 201 }
     )
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

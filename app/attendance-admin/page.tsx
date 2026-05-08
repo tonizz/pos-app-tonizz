@@ -267,6 +267,13 @@ export default function AttendanceAdminPage() {
               <p className="text-sm text-gray-600 mt-1">Real-time sales team location tracking</p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/registrations')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Users size={16} />
+                Approval Registrasi
+              </button>
               <input
                 type="date"
                 value={selectedDate}
