@@ -259,9 +259,14 @@ export default function ProductsPage() {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option value="">Semua Kategori</option>
+              {categories.filter(c => !c.parentId).map(parent => (
+                <optgroup key={parent.id} label={parent.name}>
+                  <option value={parent.id}>{parent.name}</option>
+                  {categories.filter(c => c.parentId === parent.id).map(child => (
+                    <option key={child.id} value={child.id}>— {child.name}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

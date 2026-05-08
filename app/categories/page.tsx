@@ -142,8 +142,26 @@ export default function CategoriesPage() {
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Get parent categories (no parent)
+  // Hanya category level 1 (tanpa parent) yang bisa jadi parent
   const parentCategories = categories.filter(cat => !cat.parentId)
+
+  // Susun hierarki: parent dulu, lalu children-nya
+  const buildHierarchy = () => {
+    if (searchQuery) return filteredCategories
+    const result: Category[] = []
+    parentCategories.forEach(parent => {
+      result.push(parent)
+      const children = categories.filter(c => c.parentId === parent.id)
+      children.forEach(child => result.push(child))
+    })
+    // Tambahkan orphan (jika ada)
+    filteredCategories.forEach(cat => {
+      if (!result.find(r => r.id === cat.id)) result.push(cat)
+    })
+    return result
+  }
+
+  const hierarchyList = buildHierarchy()
 
   if (!mounted) {
     return null
@@ -303,18 +321,29 @@ export default function CategoriesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCategories.map((category) => (
-                    <tr key={category.id} className="border-b border-gray-700 hover:bg-gray-700">
+                  {hierarchyList.map((category) => (
+                    <tr key={category.id} className={`border-b border-gray-700 hover:bg-gray-700 ${category.parentId ? 'bg-gray-850' : ''}`}>
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center">
-                            <FolderTree size={20} className="text-blue-300" />
+                        <div className="flex items-center gap-3" style={{ paddingLeft: category.parentId ? '2rem' : '0' }}>
+                          {category.parentId ? (
+                            <span className="text-gray-500 text-lg">└</span>
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${category.parentId ? 'bg-purple-900' : 'bg-blue-900'}`}>
+                            <FolderTree size={20} className={category.parentId ? 'text-purple-300' : 'text-blue-300'} />
                           </div>
-                          <span className="font-semibold text-white">{category.name}</span>
+                          <div>
+                            <span className="font-semibold text-white">{category.name}</span>
+                            {!category.parentId && (
+                              <span className="ml-2 text-xs bg-blue-800 text-blue-300 px-2 py-0.5 rounded-full">Main</span>
+                            )}
+                            {category.parentId && (
+                              <span className="ml-2 text-xs bg-purple-800 text-purple-300 px-2 py-0.5 rounded-full">Sub</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-400">
-                        {category.parent?.name || '-'}
+                        {category.parent?.name || <span className="text-gray-600">—</span>}
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-300">
                         {category._count?.products || 0}

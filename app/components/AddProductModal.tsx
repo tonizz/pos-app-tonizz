@@ -173,10 +173,18 @@ export default function AddProductModal({
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="">Select Category</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option value="">Pilih Kategori</option>
+                {/* Main categories */}
+                {categories.filter(c => !c.parentId).map(parent => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {categories.filter(c => c.parentId === parent.id).map(child => (
+                      <option key={child.id} value={child.id}>— {child.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
+                {/* Categories without parent that have no children shown above */}
+                {categories.filter(c => !c.parentId && categories.filter(cc => cc.parentId === c.id).length === 0).length > 0 && null}
               </select>
             </div>
           </div>
