@@ -203,16 +203,25 @@ export default function UsersPage() {
                 <p className="text-sm text-gray-400">Manage users and roles</p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                resetForm()
-                setShowModal(true)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus size={20} />
-              Add User
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/registrations')}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                <Shield size={20} />
+                Approval Registrasi
+              </button>
+              <button
+                onClick={() => {
+                  resetForm()
+                  setShowModal(true)
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus size={20} />
+                Add User
+              </button>
+            </div>
           </div>
         </div>
       </header>
