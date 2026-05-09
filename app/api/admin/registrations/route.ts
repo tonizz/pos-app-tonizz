@@ -7,6 +7,9 @@ function adminOnly(request: NextRequest) {
   if (!token) return null
   const decoded = verifyToken(token)
   if (!decoded) return null
+  // role ada di token payload (digenerate saat login)
+  const role = decoded.role
+  if (!role || !['SUPER_ADMIN', 'ADMIN'].includes(role)) return null
   return decoded
 }
 

@@ -39,19 +39,20 @@ export async function POST(
   if (!supplier) return NextResponse.json({ error: 'Supplier tidak ditemukan' }, { status: 404 })
   if (amount > supplier.debt) return NextResponse.json({ error: 'Pembayaran melebihi hutang' }, { status: 400 })
 
-  await prisma.supplier.update({
-    where: { id },
-    data: { debt: { decrement: amount } }
-  })
-
-  await prisma.auditLog.create({
-    data: {
-      userId: decoded.userId,
-      action: 'PAYMENT',
-      entity: 'Supplier',
-      entityId: id,
-      details: `Bayar hutang ${supplier.name}: Rp ${amount.toLocaleString('id-ID')}${notes ? ` - ${notes}` : ''}`
-    }
+  await prisma.$transaction(async (tx) => {
+    await tx.supplier.update({
+      where: { id },
+      data: { debt: { decrement: amount } }
+    })
+    await tx.auditLog.create({
+      data: {
+        userId: decoded.userId,
+        action: 'PAYMENT',
+        entity: 'Supplier',
+        entityId: id,
+        details: `Bayar hutang ${supplier.name}: Rp ${amount.toLocaleString('id-ID')}${notes ? ` - ${notes}` : ''}`
+      }
+    })
   })
 
   return NextResponse.json({ success: true, remainingDebt: supplier.debt - amount })

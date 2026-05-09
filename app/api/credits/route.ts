@@ -38,16 +38,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Update overdue status
-    const now = new Date()
-    for (const credit of creditTransactions) {
-      if (credit.status !== 'PAID' && credit.dueDate && credit.dueDate < now) {
-        await prisma.creditTransaction.update({
-          where: { id: credit.id },
-          data: { status: 'OVERDUE' }
-        })
-      }
-    }
+    // Update overdue status dengan updateMany (atomic, bukan loop)
+    await prisma.creditTransaction.updateMany({
+      where: {
+        status: { notIn: ['PAID'] },
+        dueDate: { lt: new Date() }
+      },
+      data: { status: 'OVERDUE' }
+    })
 
     return NextResponse.json({ creditTransactions })
   } catch (error) {

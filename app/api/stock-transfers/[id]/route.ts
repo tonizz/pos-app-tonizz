@@ -57,27 +57,23 @@ export async function PUT(
       )
     }
 
-    // If completing transfer, update stock
+    // If completing transfer, update stock atomically
     if (status === 'COMPLETED') {
-      for (const item of transfer.items) {
-        // Reduce stock from source warehouse
-        const fromStock = await prisma.stock.findFirst({
-          where: {
-            productId: item.productId,
-            warehouseId: transfer.fromWarehouseId
-          }
-        })
-
-        if (fromStock) {
-          await prisma.stock.update({
-            where: { id: fromStock.id },
-            data: {
-              quantity: fromStock.quantity - item.quantity
-            }
+      await prisma.$transaction(async (tx) => {
+        for (const item of transfer.items) {
+          const fromStock = await tx.stock.findFirst({
+            where: { productId: item.productId, warehouseId: transfer.fromWarehouseId }
           })
 
-          // Create stock movement for OUT
-          await prisma.stockMovement.create({
+          if (!fromStock || fromStock.quantity < item.quantity) {
+            throw new Error(`Stok tidak cukup untuk produk ${item.product.name}`)
+          }
+
+          await tx.stock.update({
+            where: { id: fromStock.id },
+            data: { quantity: fromStock.quantity - item.quantity }
+          })
+          await tx.stockMovement.create({
             data: {
               stockId: fromStock.id,
               warehouseId: transfer.fromWarehouseId,
@@ -87,59 +83,43 @@ export async function PUT(
               notes: `Transfer to ${transfer.toWarehouse?.name || 'warehouse'}`
             }
           })
-        }
 
-        // Add stock to destination warehouse
-        const toStock = await prisma.stock.findFirst({
-          where: {
-            productId: item.productId,
-            warehouseId: transfer.toWarehouseId
+          const toStock = await tx.stock.findFirst({
+            where: { productId: item.productId, warehouseId: transfer.toWarehouseId }
+          })
+
+          if (toStock) {
+            await tx.stock.update({
+              where: { id: toStock.id },
+              data: { quantity: toStock.quantity + item.quantity }
+            })
+            await tx.stockMovement.create({
+              data: {
+                stockId: toStock.id,
+                warehouseId: transfer.toWarehouseId,
+                type: 'TRANSFER',
+                quantity: item.quantity,
+                reference: transfer.transferNo,
+                notes: `Transfer from ${transfer.fromWarehouse?.name || 'warehouse'}`
+              }
+            })
+          } else {
+            const newStock = await tx.stock.create({
+              data: { productId: item.productId, warehouseId: transfer.toWarehouseId, quantity: item.quantity, minStock: 0 }
+            })
+            await tx.stockMovement.create({
+              data: {
+                stockId: newStock.id,
+                warehouseId: transfer.toWarehouseId,
+                type: 'TRANSFER',
+                quantity: item.quantity,
+                reference: transfer.transferNo,
+                notes: `Transfer from ${transfer.fromWarehouse?.name || 'warehouse'}`
+              }
+            })
           }
-        })
-
-        if (toStock) {
-          await prisma.stock.update({
-            where: { id: toStock.id },
-            data: {
-              quantity: toStock.quantity + item.quantity
-            }
-          })
-
-          // Create stock movement for IN
-          await prisma.stockMovement.create({
-            data: {
-              stockId: toStock.id,
-              warehouseId: transfer.toWarehouseId,
-              type: 'TRANSFER',
-              quantity: item.quantity,
-              reference: transfer.transferNo,
-              notes: `Transfer from ${transfer.fromWarehouse?.name || 'warehouse'}`
-            }
-          })
-        } else {
-          // Create new stock record if doesn't exist
-          const newStock = await prisma.stock.create({
-            data: {
-              productId: item.productId,
-              warehouseId: transfer.toWarehouseId,
-              quantity: item.quantity,
-              minStock: 0
-            }
-          })
-
-          // Create stock movement for IN
-          await prisma.stockMovement.create({
-            data: {
-              stockId: newStock.id,
-              warehouseId: transfer.toWarehouseId,
-              type: 'TRANSFER',
-              quantity: item.quantity,
-              reference: transfer.transferNo,
-              notes: `Transfer from ${transfer.fromWarehouse?.name || 'warehouse'}`
-            }
-          })
         }
-      }
+      })
     }
 
     const updatedTransfer = await prisma.stockTransfer.update({

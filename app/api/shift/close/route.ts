@@ -65,8 +65,9 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     const totalSales = shift.transactions.reduce((sum, t) => sum + t.total, 0)
+    // totalCash = jumlah uang yang masuk (paidAmount), bukan nilai transaksi
     const totalCash = shift.transactions.reduce((sum, t) => sum + t.paidAmount, 0)
-    const expectedAmount = shift.openAmount + totalCash
+    const expectedAmount = shift.openAmount + totalSales  // expected berdasarkan nilai penjualan
     const difference = parseFloat(actualAmount) - expectedAmount
 
     // Close shift
