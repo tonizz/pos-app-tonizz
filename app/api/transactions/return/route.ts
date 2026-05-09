@@ -23,13 +23,17 @@ export async function POST(request: NextRequest) {
   if (!transaction) return NextResponse.json({ error: 'Transaksi tidak ditemukan' }, { status: 404 })
   if (transaction.status === 'REFUNDED') return NextResponse.json({ error: 'Transaksi sudah di-refund' }, { status: 400 })
 
-  // Hitung total refund
+  // Hitung total refund + validasi qty return tidak melebihi sisa yang belum di-return
   let refundTotal = 0
   for (const ret of returnItems) {
     const txItem = transaction.items.find(i => i.id === ret.transactionItemId)
     if (!txItem) continue
-    if (ret.quantity > txItem.quantity) {
-      return NextResponse.json({ error: `Qty return melebihi qty beli untuk ${txItem.product.name}` }, { status: 400 })
+    const alreadyReturned = txItem.returnedQty ?? 0
+    const maxReturnable = txItem.quantity - alreadyReturned
+    if (ret.quantity > maxReturnable) {
+      return NextResponse.json({
+        error: `Qty return melebihi sisa yang bisa di-return untuk ${txItem.product.name}. Maks: ${maxReturnable}`
+      }, { status: 400 })
     }
     refundTotal += (txItem.price - (txItem.discount || 0)) * ret.quantity
   }
@@ -60,6 +64,12 @@ export async function POST(request: NextRequest) {
           }
         })
       }
+
+      // Update returnedQty di transaction item
+      await tx.transactionItem.update({
+        where: { id: ret.transactionItemId },
+        data: { returnedQty: { increment: ret.quantity } }
+      })
     }
 
     // Update status transaksi

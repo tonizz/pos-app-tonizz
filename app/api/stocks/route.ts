@@ -115,6 +115,11 @@ export async function POST(request: NextRequest) {
 
       let stock
       if (existingStock) {
+        // Bug fix: validasi stok cukup sebelum OUT
+        if (type === 'OUT' && existingStock.quantity < quantity) {
+          throw new Error(`Stok tidak cukup. Tersedia: ${existingStock.quantity}, diminta: ${quantity}`)
+        }
+
         stock = await tx.stock.update({
           where: { id: existingStock.id },
           data: {

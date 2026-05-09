@@ -86,21 +86,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check stock availability
+    // Check stock availability (termasuk reserved dari transfer PENDING/IN_TRANSIT)
     for (const item of items) {
       const stock = await prisma.stock.findFirst({
-        where: {
-          productId: item.productId,
-          warehouseId: fromWarehouseId
-        }
+        where: { productId: item.productId, warehouseId: fromWarehouseId }
       })
 
-      if (!stock || stock.quantity < item.quantity) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId }
-        })
+      if (!stock) {
+        const product = await prisma.product.findUnique({ where: { id: item.productId } })
+        return NextResponse.json({ error: `Stok tidak ditemukan untuk ${product?.name}` }, { status: 400 })
+      }
+
+      // Hitung reserved dari transfer lain yang masih aktif
+      const pendingTransfers = await prisma.stockTransfer.findMany({
+        where: {
+          fromWarehouseId,
+          status: { in: ['PENDING', 'IN_TRANSIT'] },
+          items: { some: { productId: item.productId } }
+        },
+        include: { items: { where: { productId: item.productId } } }
+      })
+      const reserved = pendingTransfers.reduce((sum, t) =>
+        sum + t.items.reduce((s, i) => s + i.quantity, 0), 0)
+      const available = stock.quantity - reserved
+
+      if (available < item.quantity) {
+        const product = await prisma.product.findUnique({ where: { id: item.productId } })
         return NextResponse.json(
-          { error: `Insufficient stock for ${product?.name}` },
+          { error: `Stok tidak cukup untuk ${product?.name}. Tersedia: ${available} (stok: ${stock.quantity}, reserved: ${reserved})` },
           { status: 400 }
         )
       }

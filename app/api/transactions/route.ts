@@ -280,7 +280,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
 
     if (invoiceNo) {
-      where.invoiceNo = { contains: invoiceNo, mode: 'insensitive' }
+      where.invoiceNo = { contains: invoiceNo }
     }
 
     if (startDate && endDate) {
