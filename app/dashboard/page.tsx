@@ -361,6 +361,14 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={() => router.push('/return')}
+            className="bg-orange-600 text-white p-6 rounded-xl hover:bg-orange-700 transition-colors"
+          >
+            <ArrowLeftRight size={32} className="mb-2" />
+            <p className="font-semibold">Return / Refund</p>
+          </button>
+
+          <button
             onClick={() => router.push('/backup')}
             className="bg-red-600 text-white p-6 rounded-xl hover:bg-red-700 transition-colors"
           >

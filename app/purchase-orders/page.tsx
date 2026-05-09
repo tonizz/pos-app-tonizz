@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '@/lib/utils'
 import toast, { Toaster } from 'react-hot-toast'
-import { ShoppingBag, Plus, Search, ArrowLeft, X, CheckCircle, XCircle, Clock, FileText } from 'lucide-react'
+import { ShoppingBag, Plus, Search, ArrowLeft, X, CheckCircle, XCircle, Clock, FileText, PackageCheck } from 'lucide-react'
 
 interface PurchaseOrder {
   id: string
@@ -69,6 +69,9 @@ export default function PurchaseOrdersPage() {
   })
   const [selectedItems, setSelectedItems] = useState<{ productId: string; quantity: number; price: number }[]>([])
   const [mounted, setMounted] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
+  const [receivingPO, setReceivingPO] = useState<PurchaseOrder | null>(null)
+  const [receiveItems, setReceiveItems] = useState<{ productId: string; orderedQty: number; receivedQty: number; productName: string }[]>([])
 
   useEffect(() => {
     setMounted(true)
@@ -263,6 +266,35 @@ export default function PurchaseOrdersPage() {
       fetchPurchaseOrders()
     } catch (error: any) {
       toast.error(error.message)
+    }
+  }
+
+  const openReceiveModal = (po: PurchaseOrder) => {
+    setReceivingPO(po)
+    setReceiveItems(po.items.map(item => ({
+      productId: item.productId,
+      productName: item.product.name,
+      orderedQty: item.quantity,
+      receivedQty: item.quantity // default: terima semua
+    })))
+    setShowReceiveModal(true)
+  }
+
+  const handleSubmitReceive = async () => {
+    if (!receivingPO) return
+    try {
+      const res = await fetch(`/api/purchase-orders/${receivingPO.id}/receive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receivedItems: receiveItems.map(i => ({ productId: i.productId, receivedQty: i.receivedQty })) })
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const result = await res.json()
+      toast.success(result.status === 'RECEIVED' ? 'Semua barang diterima!' : 'Penerimaan sebagian berhasil')
+      setShowReceiveModal(false)
+      fetchPurchaseOrders()
+    } catch (err: any) {
+      toast.error(err.message)
     }
   }
 
@@ -469,6 +501,70 @@ export default function PurchaseOrdersPage() {
         </div>
       )}
 
+      {/* Partial Receive Modal */}
+      {showReceiveModal && receivingPO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-xl max-w-lg w-full border border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-white">Terima Barang</h2>
+                <p className="text-sm text-gray-400">{receivingPO.poNumber} — {receivingPO.supplier.name}</p>
+              </div>
+              <button onClick={() => setShowReceiveModal(false)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-blue-300 bg-blue-900 rounded-lg p-3">
+                Isi qty yang benar-benar diterima. Jika kurang dari pesanan, status PO tetap APPROVED untuk penerimaan berikutnya.
+              </p>
+              <div className="space-y-3">
+                {receiveItems.map((item, i) => (
+                  <div key={item.productId} className="bg-gray-700 rounded-lg p-3">
+                    <p className="text-sm font-medium text-white mb-2">{item.productName}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-400 mb-1">Dipesan</p>
+                        <p className="text-white font-semibold">{item.orderedQty}</p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-400 mb-1">Diterima *</p>
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.orderedQty}
+                          value={item.receivedQty}
+                          onChange={(e) => {
+                            const updated = [...receiveItems]
+                            updated[i] = { ...updated[i], receivedQty: parseInt(e.target.value) || 0 }
+                            setReceiveItems(updated)
+                          }}
+                          className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded-lg focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <p className="text-xs text-gray-400 mb-1">Selisih</p>
+                        <p className={`font-semibold ${item.orderedQty - item.receivedQty > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                          {item.orderedQty - item.receivedQty > 0 ? `-${item.orderedQty - item.receivedQty}` : '✓'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowReceiveModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
+                  Batal
+                </button>
+                <button onClick={handleSubmitReceive}
+                  className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+                  Konfirmasi Penerimaan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -635,10 +731,11 @@ export default function PurchaseOrdersPage() {
 
                 {po.status === 'APPROVED' && (
                   <button
-                    onClick={() => handleUpdateStatus(po.id, 'RECEIVED')}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                    onClick={() => openReceiveModal(po)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                   >
-                    Mark as Received
+                    <PackageCheck size={16} />
+                    Terima Barang
                   </button>
                 )}
 

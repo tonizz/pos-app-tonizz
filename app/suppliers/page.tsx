@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../store/authStore'
 import toast, { Toaster } from 'react-hot-toast'
-import { Truck, Plus, Edit, Trash2, Search, ArrowLeft, X, Phone, Mail, MapPin } from 'lucide-react'
+import { Truck, Plus, Edit, Trash2, Search, ArrowLeft, X, Phone, Mail, MapPin, History, CreditCard, DollarSign } from 'lucide-react'
 
 interface Supplier {
   id: string
@@ -33,6 +33,12 @@ export default function SuppliersPage() {
     address: ''
   })
   const [mounted, setMounted] = useState(false)
+  const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null)
+  const [detailTab, setDetailTab] = useState<'transactions' | 'payment'>('transactions')
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [txLoading, setTxLoading] = useState(false)
+  const [payAmount, setPayAmount] = useState('')
+  const [payNotes, setPayNotes] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -134,6 +140,41 @@ export default function SuppliersPage() {
       fetchSuppliers()
     } catch (error: any) {
       toast.error(error.message)
+    }
+  }
+
+  const openDetail = async (supplier: Supplier) => {
+    setDetailSupplier(supplier)
+    setDetailTab('transactions')
+    setTxLoading(true)
+    try {
+      const res = await fetch(`/api/suppliers/${supplier.id}/transactions`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) setTransactions(await res.json())
+    } finally {
+      setTxLoading(false)
+    }
+  }
+
+  const handlePayment = async () => {
+    if (!detailSupplier || !payAmount) return
+    try {
+      const res = await fetch(`/api/suppliers/${detailSupplier.id}/transactions`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseFloat(payAmount), notes: payNotes })
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const result = await res.json()
+      toast.success('Pembayaran berhasil')
+      setPayAmount('')
+      setPayNotes('')
+      // Update sisa hutang di state
+      setDetailSupplier(prev => prev ? { ...prev, debt: result.remainingDebt } : null)
+      setSuppliers(prev => prev.map(s => s.id === detailSupplier.id ? { ...s, debt: result.remainingDebt } : s))
+    } catch (err: any) {
+      toast.error(err.message)
     }
   }
 
@@ -260,6 +301,116 @@ export default function SuppliersPage() {
         </div>
       )}
 
+      {/* Detail Supplier Modal */}
+      {detailSupplier && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full border border-gray-700 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-white">{detailSupplier.name}</h2>
+                {detailSupplier.debt > 0 && (
+                  <p className="text-sm text-red-400">Hutang: Rp {detailSupplier.debt.toLocaleString('id-ID')}</p>
+                )}
+              </div>
+              <button onClick={() => setDetailSupplier(null)} className="text-gray-400 hover:text-white"><X size={24} /></button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-700">
+              <button onClick={() => setDetailTab('transactions')}
+                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === 'transactions' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400'}`}>
+                <History size={16} /> Riwayat PO
+              </button>
+              <button onClick={() => setDetailTab('payment')}
+                className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === 'payment' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400'}`}>
+                <CreditCard size={16} /> Bayar Hutang
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              {detailTab === 'transactions' && (
+                txLoading ? (
+                  <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>
+                ) : transactions.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">Belum ada riwayat transaksi</p>
+                ) : (
+                  <div className="space-y-3">
+                    {transactions.map((po: any) => (
+                      <div key={po.id} className="bg-gray-700 rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-medium text-white">{po.poNumber}</p>
+                            <p className="text-xs text-gray-400">{po.warehouse?.name} • {new Date(po.createdAt).toLocaleDateString('id-ID')}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            po.status === 'RECEIVED' ? 'bg-green-900 text-green-300' :
+                            po.status === 'CANCELLED' ? 'bg-red-900 text-red-300' :
+                            'bg-yellow-900 text-yellow-300'
+                          }`}>{po.status}</span>
+                        </div>
+                        <div className="text-sm text-gray-300">
+                          {po.items?.map((item: any) => (
+                            <span key={item.id} className="mr-3">{item.product?.name} ×{item.quantity}</span>
+                          ))}
+                        </div>
+                        <p className="text-right text-white font-semibold mt-1">Rp {po.total?.toLocaleString('id-ID')}</p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {detailTab === 'payment' && (
+                <div className="space-y-4">
+                  {detailSupplier.debt <= 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-green-400 text-lg font-semibold">✓ Tidak ada hutang</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-red-900 border border-red-700 rounded-lg p-4">
+                        <p className="text-sm text-red-300">Total Hutang</p>
+                        <p className="text-2xl font-bold text-white">Rp {detailSupplier.debt.toLocaleString('id-ID')}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Jumlah Pembayaran *</label>
+                        <input type="number" value={payAmount}
+                          onChange={(e) => setPayAmount(e.target.value)}
+                          max={detailSupplier.debt} min={1}
+                          placeholder="Masukkan jumlah"
+                          className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          {[25, 50, 75, 100].map(pct => (
+                            <button key={pct} type="button"
+                              onClick={() => setPayAmount(String(Math.round(detailSupplier.debt * pct / 100)))}
+                              className="flex-1 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Keterangan</label>
+                        <input type="text" value={payNotes}
+                          onChange={(e) => setPayNotes(e.target.value)}
+                          placeholder="Transfer BCA, tunai, dll"
+                          className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button onClick={handlePayment}
+                        className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+                        Bayar Hutang
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -364,9 +515,22 @@ export default function SuppliersPage() {
                       <span className="line-clamp-2">{supplier.address}</span>
                     </div>
                   )}
+                  {supplier.debt > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-red-400 font-medium">
+                      <DollarSign size={16} />
+                      <span>Hutang: Rp {supplier.debt.toLocaleString('id-ID')}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 border-t border-gray-700">
+                  <button
+                    onClick={() => openDetail(supplier)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-green-400 hover:bg-gray-700 rounded-lg"
+                  >
+                    <History size={16} />
+                    Detail
+                  </button>
                   <button
                     onClick={() => handleOpenModal(supplier)}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-400 hover:bg-gray-700 rounded-lg"
@@ -379,7 +543,7 @@ export default function SuppliersPage() {
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-400 hover:bg-gray-700 rounded-lg"
                   >
                     <Trash2 size={16} />
-                    Delete
+                    Hapus
                   </button>
                 </div>
               </div>

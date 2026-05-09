@@ -273,10 +273,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const invoiceNo = searchParams.get('invoiceNo')
 
     const skip = (page - 1) * limit
 
     const where: any = {}
+
+    if (invoiceNo) {
+      where.invoiceNo = { contains: invoiceNo, mode: 'insensitive' }
+    }
 
     if (startDate && endDate) {
       where.createdAt = {
