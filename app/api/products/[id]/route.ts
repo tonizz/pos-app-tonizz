@@ -26,6 +26,7 @@ export async function PUT(
       name,
       sku,
       barcode,
+      categoryId,
       buyPrice,
       sellPrice,
       wholesalePrice,
@@ -52,9 +53,10 @@ export async function PUT(
         name,
         sku,
         barcode,
+        categoryId,
         buyPrice: parseFloat(buyPrice),
         sellPrice: parseFloat(sellPrice),
-        wholesalePrice: parseFloat(wholesalePrice),
+        wholesalePrice: wholesalePrice ? parseFloat(wholesalePrice) : null,
         autoDiscount: autoDiscount ? parseFloat(autoDiscount) : null,
         autoDiscountType: autoDiscount ? autoDiscountType : null
       }

@@ -202,6 +202,7 @@ export default function ProductsPage() {
         }}
         onUpdate={handleUpdateProduct}
         product={editingProduct}
+        categories={categories}
       />
 
       {/* Header */}

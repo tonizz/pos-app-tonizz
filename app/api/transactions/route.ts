@@ -123,6 +123,13 @@ export async function POST(request: NextRequest) {
       })
 
       for (const item of items) {
+        // Concurrency Lock: Mengunci baris di PostgreSQL menggunakan SELECT FOR UPDATE agar transaksi lain menunggu
+        await tx.$queryRaw`
+          SELECT id FROM "Stock"
+          WHERE "productId" = ${item.productId} AND "warehouseId" = ${warehouseId}
+          FOR UPDATE
+        `
+
         const stock = await tx.stock.findFirst({
           where: {
             productId: item.productId,

@@ -9,18 +9,21 @@ interface EditProductModalProps {
   onClose: () => void
   onUpdate: (data: any) => Promise<void>
   product: any
+  categories: any[]
 }
 
 export default function EditProductModal({
   isOpen,
   onClose,
   onUpdate,
-  product
+  product,
+  categories = []
 }: EditProductModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
     barcode: '',
+    categoryId: '',
     buyPrice: '',
     sellPrice: '',
     wholesalePrice: '',
@@ -36,6 +39,7 @@ export default function EditProductModal({
         name: product.name || '',
         sku: product.sku || '',
         barcode: product.barcode || '',
+        categoryId: product.categoryId || '',
         buyPrice: product.buyPrice?.toString() || '',
         sellPrice: product.sellPrice?.toString() || '',
         wholesalePrice: product.wholesalePrice?.toString() || '',
@@ -56,10 +60,11 @@ export default function EditProductModal({
       const updateData: any = {
         name: formData.name,
         sku: formData.sku,
-        barcode: formData.barcode,
+        barcode: formData.barcode || null,
+        categoryId: formData.categoryId,
         buyPrice: parseFloat(formData.buyPrice),
         sellPrice: parseFloat(formData.sellPrice),
-        wholesalePrice: parseFloat(formData.wholesalePrice)
+        wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : null
       }
 
       // Add auto discount if provided
@@ -138,16 +143,41 @@ export default function EditProductModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Barcode
-            </label>
-            <input
-              type="text"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {categories.filter(c => !c.parentId).map(parent => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {categories.filter(c => c.parentId === parent.id).map(child => (
+                      <option key={child.id} value={child.id}>— {child.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Barcode
+              </label>
+              <input
+                type="text"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                placeholder="Scan or enter barcode"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

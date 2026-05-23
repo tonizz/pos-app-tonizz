@@ -80,10 +80,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Check if category has products
+    // Check if category has products or sub-categories
     const category = await prisma.category.findUnique({
       where: { id: id },
       include: {
+        children: true,
         _count: {
           select: { products: true }
         }
@@ -94,6 +95,13 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Category not found' },
         { status: 404 }
+      )
+    }
+
+    if (category.children.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete category that has sub-categories. Please delete or reassign sub-categories first.' },
+        { status: 400 }
       )
     }
 
