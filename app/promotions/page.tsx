@@ -29,6 +29,16 @@ interface Promotion {
   minPurchase: number | null
   maxDiscount: number | null
   voucherCode: string | null
+  buyQuantity: number | null
+  getQuantity: number | null
+  freeProductId: string | null
+  applicableProductIds: string | null
+  applicableCategoryId: string | null
+  tiers: string | null
+  isFlashSale: boolean
+  flashSaleEndTime: string | null
+  bundleProductIds: string | null
+  bundlePrice: number | null
   createdAt: string
 }
 
@@ -42,6 +52,10 @@ export default function PromotionsPage() {
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  // Products & Categories for selectors
+  const [allProducts, setAllProducts] = useState<any[]>([])
+  const [allCategories, setAllCategories] = useState<any[]>([])
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -52,7 +66,21 @@ export default function PromotionsPage() {
     isActive: true,
     minPurchase: '',
     maxDiscount: '',
-    voucherCode: ''
+    voucherCode: '',
+    // BXGY
+    buyQuantity: '',
+    getQuantity: '',
+    // Target
+    applicableProductIds: '',
+    applicableCategoryId: '',
+    // Tiered
+    tiers: '',
+    // Flash Sale
+    isFlashSale: false,
+    flashSaleEndDateTime: '',
+    // Bundle
+    bundleProductIds: '',
+    bundlePrice: ''
   })
 
   useEffect(() => {
@@ -73,6 +101,7 @@ export default function PromotionsPage() {
       }
   
       fetchPromotions()
+      fetchProductsAndCategories()
     }, [, _hasHydrated])
 
   const fetchPromotions = async () => {
@@ -95,6 +124,25 @@ export default function PromotionsPage() {
     }
   }
 
+  const fetchProductsAndCategories = async () => {
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        fetch('/api/products?limit=500', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/categories', { headers: { 'Authorization': `Bearer ${token}` } })
+      ])
+      if (prodRes.ok) {
+        const prodData = await prodRes.json()
+        setAllProducts(prodData.products || [])
+      }
+      if (catRes.ok) {
+        const catData = await catRes.json()
+        setAllCategories(Array.isArray(catData) ? catData : catData.categories || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch products/categories:', error)
+    }
+  }
+
   useEffect(() => {
     const delaySearch = setTimeout(() => {
       if (isAuthenticated()) {
@@ -107,9 +155,9 @@ export default function PromotionsPage() {
   const handleOpenModal = (promo?: Promotion) => {
     if (promo) {
       setEditingPromo(promo)
-      // Convert ISO date to DD-MM-YYYY for display
       const startDate = new Date(promo.startDate)
       const endDate = new Date(promo.endDate)
+      const flashEnd = promo.flashSaleEndTime ? new Date(promo.flashSaleEndTime) : null
       setFormData({
         name: promo.name,
         type: promo.type,
@@ -119,11 +167,19 @@ export default function PromotionsPage() {
         isActive: promo.isActive,
         minPurchase: promo.minPurchase?.toString() || '',
         maxDiscount: promo.maxDiscount?.toString() || '',
-        voucherCode: promo.voucherCode || ''
+        voucherCode: promo.voucherCode || '',
+        buyQuantity: promo.buyQuantity?.toString() || '',
+        getQuantity: promo.getQuantity?.toString() || '',
+        applicableProductIds: promo.applicableProductIds || '',
+        applicableCategoryId: promo.applicableCategoryId || '',
+        tiers: promo.tiers || '',
+        isFlashSale: promo.isFlashSale,
+        flashSaleEndDateTime: flashEnd ? formatDateForInput(flashEnd) + ' ' + String(flashEnd.getHours()).padStart(2,'0') + ':' + String(flashEnd.getMinutes()).padStart(2,'0') : '',
+        bundleProductIds: promo.bundleProductIds || '',
+        bundlePrice: promo.bundlePrice?.toString() || ''
       })
     } else {
       setEditingPromo(null)
-      // Set default dates: today and tomorrow
       const today = new Date()
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
@@ -136,7 +192,16 @@ export default function PromotionsPage() {
         isActive: true,
         minPurchase: '',
         maxDiscount: '',
-        voucherCode: ''
+        voucherCode: '',
+        buyQuantity: '',
+        getQuantity: '',
+        applicableProductIds: '',
+        applicableCategoryId: '',
+        tiers: '',
+        isFlashSale: false,
+        flashSaleEndDateTime: '',
+        bundleProductIds: '',
+        bundlePrice: ''
       })
     }
     setShowModal(true)
@@ -185,6 +250,28 @@ export default function PromotionsPage() {
         return
       }
 
+      // Parse flash sale end time if present
+      let flashSaleEndTime = null
+      if (formData.isFlashSale && formData.flashSaleEndDateTime) {
+        // Format: "DD-MM-YYYY HH:mm"
+        const parts = formData.flashSaleEndDateTime.split(' ')
+        if (parts.length === 2) {
+          const datePart = parseDateFromInput(parts[0])
+          const timePart = parts[1].split(':')
+          if (!isNaN(datePart.getTime()) && timePart.length === 2) {
+            datePart.setHours(parseInt(timePart[0]), parseInt(timePart[1]))
+            flashSaleEndTime = datePart.toISOString()
+          }
+        }
+      }
+
+      // Convert comma-separated product/bundle IDs to JSON arrays
+      const toJsonArray = (val: string) => {
+        if (!val || !val.trim()) return null
+        const parts = val.split(',').map(s => s.trim()).filter(Boolean)
+        return parts.length > 0 ? JSON.stringify(parts) : null
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -194,7 +281,11 @@ export default function PromotionsPage() {
         body: JSON.stringify({
           ...formData,
           startDate: startDate.toISOString(),
-          endDate: endDate.toISOString()
+          endDate: endDate.toISOString(),
+          flashSaleEndTime,
+          applicableProductIds: toJsonArray(formData.applicableProductIds),
+          bundleProductIds: toJsonArray(formData.bundleProductIds),
+          tiers: formData.tiers && formData.tiers.trim() ? formData.tiers : null
         })
       })
 
@@ -384,6 +475,36 @@ export default function PromotionsPage() {
                       <span className="text-sm font-mono text-purple-400">{promo.voucherCode}</span>
                     </div>
                   )}
+                  {promo.type === 'BUY_X_GET_Y' && promo.buyQuantity && promo.getQuantity && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">BXGY:</span>
+                      <span className="text-sm text-orange-400">Buy {promo.buyQuantity} Get {promo.getQuantity}</span>
+                    </div>
+                  )}
+                  {promo.applicableCategoryId && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">Target:</span>
+                      <span className="text-sm text-purple-400">Specific category</span>
+                    </div>
+                  )}
+                  {promo.tiers && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">Tiers:</span>
+                      <span className="text-sm text-yellow-400">Volume discount</span>
+                    </div>
+                  )}
+                  {promo.isFlashSale && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">Flash Sale:</span>
+                      <span className="text-sm text-orange-400 font-semibold">⏱ Active</span>
+                    </div>
+                  )}
+                  {promo.bundlePrice && promo.bundleProductIds && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">Bundle:</span>
+                      <span className="text-sm text-green-400">{formatCurrency(promo.bundlePrice)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-gray-700 pt-3 space-y-2">
@@ -457,11 +578,14 @@ export default function PromotionsPage() {
                     <option value="VOUCHER">Voucher</option>
                     <option value="BUY_X_GET_Y">Buy X Get Y</option>
                   </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formData.type === 'BUY_X_GET_Y' ? 'Configure buy & get qty below' : formData.type === 'VOUCHER' ? 'Uses voucher code' : 'Discount on total'}
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Value *
+                    Value{formData.type !== 'BUY_X_GET_Y' ? ' *' : ''}
                   </label>
                   <input
                     type="number"
@@ -469,10 +593,220 @@ export default function PromotionsPage() {
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
+                    required={formData.type !== 'BUY_X_GET_Y'}
+                    placeholder={formData.type === 'PERCENTAGE' ? 'e.g. 10 for 10%' : formData.type === 'NOMINAL' ? 'e.g. 10000' : 'Discount value'}
                   />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formData.type === 'PERCENTAGE' ? 'Percentage value (e.g. 10 = 10%)' :
+                     formData.type === 'NOMINAL' ? 'Nominal amount in Rp' :
+                     formData.type === 'BUY_X_GET_Y' ? 'Discount amount for the free item(s)' :
+                     'Discount value'}
+                  </p>
                 </div>
               </div>
+
+              {/* Buy X Get Y Configuration */}
+              {formData.type === 'BUY_X_GET_Y' && (
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 space-y-4">
+                  <h4 className="text-sm font-semibold text-orange-400">Buy X Get Y Configuration</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Buy Quantity (X) *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.buyQuantity}
+                        onChange={(e) => setFormData({ ...formData, buyQuantity: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. 2"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Customer must buy this many</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Get Quantity (Y) *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formData.getQuantity}
+                        onChange={(e) => setFormData({ ...formData, getQuantity: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. 1"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Free items given</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <p className="text-xs text-gray-400">
+                      <span className="text-orange-400 font-semibold">How it works:</span> Jika customer membeli <strong>{formData.buyQuantity || 'X'}</strong> item, maka mendapat <strong>{formData.getQuantity || 'Y'}</strong> item gratis (senilai <strong>Rp{parseFloat(formData.value || '0').toLocaleString('id-ID')}</strong> diskon per unit gratis).
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Target Products / Categories */}
+              <details className="bg-gray-700 border border-gray-600 rounded-lg">
+                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
+                  🎯 Target Products / Categories (Optional)
+                </summary>
+                <div className="p-4 space-y-3 border-t border-gray-600">
+                  <p className="text-xs text-gray-400">Limit this promotion to specific products or categories. Leave empty to apply to all.</p>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">Category</label>
+                    <select
+                      value={formData.applicableCategoryId}
+                      onChange={(e) => setFormData({ ...formData, applicableCategoryId: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Categories</option>
+                      {allCategories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Product IDs (comma separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.applicableProductIds}
+                      onChange={(e) => setFormData({ ...formData, applicableProductIds: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. prod-id-1, prod-id-2, prod-id-3"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Comma-separated product IDs (leave empty for all products)</p>
+                  </div>
+                </div>
+              </details>
+
+              {/* Bundle Configuration */}
+              <details className="bg-gray-700 border border-gray-600 rounded-lg">
+                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
+                  📦 Bundle / Package Deal (Optional)
+                </summary>
+                <div className="p-4 space-y-3 border-t border-gray-600">
+                  <p className="text-xs text-gray-400">Set a special price when multiple products are bought together as a bundle.</p>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Bundle Product IDs (comma separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bundleProductIds}
+                      onChange={(e) => setFormData({ ...formData, bundleProductIds: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. prod-id-1, prod-id-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Bundle Price
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.bundlePrice}
+                      onChange={(e) => setFormData({ ...formData, bundlePrice: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Special price for bundle"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              {/* Tiered / Volume Discount */}
+              <details className="bg-gray-700 border border-gray-600 rounded-lg">
+                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
+                  📊 Tiered / Volume Discount (Optional)
+                </summary>
+                <div className="p-4 space-y-3 border-t border-gray-600">
+                  <p className="text-xs text-gray-400">Offer increasing discounts based on quantity purchased. Format: JSON array of tiers.</p>
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-2">Example format:</p>
+                    <pre className="text-xs text-green-400 font-mono">
+{`[
+  {"minQty": 1, "discount": 0, "label": "1-2 pcs"},
+  {"minQty": 3, "discount": 5, "label": "3-5 pcs (5% off)"},
+  {"minQty": 6, "discount": 10, "label": "6+ pcs (10% off)"}
+]`}
+                    </pre>
+                  </div>
+                  <textarea
+                    value={formData.tiers}
+                    onChange={(e) => setFormData({ ...formData, tiers: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                    rows={6}
+                    placeholder='[{&quot;minQty&quot;:1,&quot;discount&quot;:0,&quot;label&quot;:&quot;1-2 pcs&quot;},{&quot;minQty&quot;:3,&quot;discount&quot;:5,&quot;label&quot;:&quot;3-5 pcs&quot;}]'
+                  />
+                  {formData.tiers && (() => {
+                    try {
+                      const parsed = JSON.parse(formData.tiers)
+                      return (
+                        <div className="bg-gray-800 rounded-lg p-3">
+                          <p className="text-xs text-gray-400 mb-2">Preview ({parsed.length} tiers):</p>
+                          <div className="space-y-1">
+                            {parsed.map((tier: any, i: number) => (
+                              <div key={i} className="flex justify-between text-xs">
+                                <span className="text-gray-300">{tier.label || `${tier.minQty}+ items`}</span>
+                                <span className="text-green-400">{tier.discount}% off</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    } catch {
+                      return <p className="text-xs text-red-400">Invalid JSON format</p>
+                    }
+                  })()}
+                </div>
+              </details>
+
+              {/* Flash Sale */}
+              <details className="bg-gray-700 border border-gray-600 rounded-lg">
+                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
+                  ⚡ Flash Sale Timer (Optional)
+                </summary>
+                <div className="p-4 space-y-3 border-t border-gray-600">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-300">Enable Flash Sale Timer</p>
+                      <p className="text-xs text-gray-400">Show a countdown timer on the POS screen</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isFlashSale}
+                        onChange={(e) => setFormData({ ...formData, isFlashSale: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                    </label>
+                  </div>
+
+                  {formData.isFlashSale && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Flash Sale End Date & Time
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.flashSaleEndDateTime}
+                        onChange={(e) => setFormData({ ...formData, flashSaleEndDateTime: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="DD-MM-YYYY HH:mm (e.g. 31-12-2026 23:59)"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Format: Tanggal-Bulan-Tahun Jam:Menit</p>
+                    </div>
+                  )}
+                </div>
+              </details>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

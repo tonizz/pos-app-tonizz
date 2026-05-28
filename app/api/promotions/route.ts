@@ -80,7 +80,18 @@ export async function POST(request: NextRequest) {
       isActive,
       minPurchase,
       maxDiscount,
-      voucherCode
+      voucherCode,
+      // New fields
+      buyQuantity,
+      getQuantity,
+      freeProductId,
+      applicableProductIds,
+      applicableCategoryId,
+      tiers,
+      isFlashSale,
+      flashSaleEndTime,
+      bundleProductIds,
+      bundlePrice
     } = body
 
     // Validation
@@ -115,7 +126,17 @@ export async function POST(request: NextRequest) {
         isActive: isActive !== undefined ? isActive : true,
         minPurchase: minPurchase ? parseFloat(minPurchase) : null,
         maxDiscount: maxDiscount ? parseFloat(maxDiscount) : null,
-        voucherCode: voucherCode || null
+        voucherCode: voucherCode || null,
+        buyQuantity: buyQuantity ? parseInt(buyQuantity) : null,
+        getQuantity: getQuantity ? parseInt(getQuantity) : null,
+        freeProductId: freeProductId || null,
+        applicableProductIds: applicableProductIds || null,
+        applicableCategoryId: applicableCategoryId || null,
+        tiers: tiers || null,
+        isFlashSale: isFlashSale !== undefined ? isFlashSale : false,
+        flashSaleEndTime: flashSaleEndTime ? new Date(flashSaleEndTime) : null,
+        bundleProductIds: bundleProductIds || null,
+        bundlePrice: bundlePrice ? parseFloat(bundlePrice) : null
       }
     })
 

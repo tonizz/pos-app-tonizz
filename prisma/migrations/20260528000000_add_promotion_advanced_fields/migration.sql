@@ -1,0 +1,11 @@
+-- Add advanced promotion fields
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "buyQuantity" INTEGER;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "getQuantity" INTEGER;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "freeProductId" TEXT;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "applicableProductIds" TEXT;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "applicableCategoryId" TEXT;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "tiers" TEXT;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "isFlashSale" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "flashSaleEndTime" TIMESTAMP(3);
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "bundleProductIds" TEXT;
+ALTER TABLE "Promotion" ADD COLUMN IF NOT EXISTS "bundlePrice" DOUBLE PRECISION;

@@ -76,7 +76,18 @@ export async function PUT(
       isActive,
       minPurchase,
       maxDiscount,
-      voucherCode
+      voucherCode,
+      // New fields
+      buyQuantity,
+      getQuantity,
+      freeProductId,
+      applicableProductIds,
+      applicableCategoryId,
+      tiers,
+      isFlashSale,
+      flashSaleEndTime,
+      bundleProductIds,
+      bundlePrice
     } = body
 
     // Check if promotion exists
@@ -113,7 +124,17 @@ export async function PUT(
         isActive: isActive !== undefined ? isActive : existing.isActive,
         minPurchase: minPurchase !== undefined ? (minPurchase ? parseFloat(minPurchase) : null) : existing.minPurchase,
         maxDiscount: maxDiscount !== undefined ? (maxDiscount ? parseFloat(maxDiscount) : null) : existing.maxDiscount,
-        voucherCode: voucherCode !== undefined ? (voucherCode || null) : existing.voucherCode
+        voucherCode: voucherCode !== undefined ? (voucherCode || null) : existing.voucherCode,
+        buyQuantity: buyQuantity !== undefined ? (buyQuantity ? parseInt(buyQuantity) : null) : existing.buyQuantity,
+        getQuantity: getQuantity !== undefined ? (getQuantity ? parseInt(getQuantity) : null) : existing.getQuantity,
+        freeProductId: freeProductId !== undefined ? (freeProductId || null) : existing.freeProductId,
+        applicableProductIds: applicableProductIds !== undefined ? (applicableProductIds || null) : existing.applicableProductIds,
+        applicableCategoryId: applicableCategoryId !== undefined ? (applicableCategoryId || null) : existing.applicableCategoryId,
+        tiers: tiers !== undefined ? (tiers || null) : existing.tiers,
+        isFlashSale: isFlashSale !== undefined ? isFlashSale : existing.isFlashSale,
+        flashSaleEndTime: flashSaleEndTime !== undefined ? (flashSaleEndTime ? new Date(flashSaleEndTime) : null) : existing.flashSaleEndTime,
+        bundleProductIds: bundleProductIds !== undefined ? (bundleProductIds || null) : existing.bundleProductIds,
+        bundlePrice: bundlePrice !== undefined ? (bundlePrice ? parseFloat(bundlePrice) : null) : existing.bundlePrice
       }
     })
 

@@ -128,6 +128,9 @@ export default function POSPage() {
     }
   }
 
+  // Flash sale timer state
+  const [flashSaleCountdown, setFlashSaleCountdown] = useState<string | null>(null)
+
   const fetchActivePromotions = async () => {
     try {
       const response = await fetch('/api/promotions?isActive=true', {
@@ -147,6 +150,31 @@ export default function POSPage() {
       console.error('Failed to fetch promotions:', error)
     }
   }
+
+  // Flash sale countdown timer effect
+  useEffect(() => {
+    if (!appliedPromotion?.isFlashSale || !appliedPromotion?.flashSaleEndTime) return
+    
+    const timer = setInterval(() => {
+      const now = new Date()
+      const end = new Date(appliedPromotion.flashSaleEndTime)
+      const diff = end.getTime() - now.getTime()
+      
+      if (diff <= 0) {
+        setFlashSaleCountdown('Expired')
+        removePromotion()
+        clearInterval(timer)
+        return
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      setFlashSaleCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`)
+    }, 1000)
+    
+    return () => clearInterval(timer)
+  }, [appliedPromotion])
 
   const fetchActiveTax = async () => {
     try {
@@ -262,7 +290,119 @@ export default function POSPage() {
     }
   }
 
+  // Get applicable subtotal for targeted promotions
+  const getTargetedSubtotal = (promo: any, cartItems: any[]) => {
+    let targetedSubtotal = 0
+    
+    if (promo.applicableProductIds) {
+      try {
+        const prodIds = JSON.parse(promo.applicableProductIds)
+        targetedSubtotal = cartItems
+          .filter((i: any) => prodIds.includes(i.productId))
+          .reduce((sum: number, i: any) => sum + i.subtotal, 0)
+      } catch (e) {
+        targetedSubtotal = 0
+      }
+    } else if (promo.applicableCategoryId) {
+      targetedSubtotal = cartItems
+        .filter((i: any) => i.categoryId === promo.applicableCategoryId)
+        .reduce((sum: number, i: any) => sum + i.subtotal, 0)
+    } else {
+      targetedSubtotal = getSubtotal()
+    }
+    
+    return targetedSubtotal
+  }
+
   const calculatePromotionDiscount = (promo: any, subtotal: number) => {
+    const cartItems = items
+    
+    // 1. Tiered / Volume Discount
+    if (promo.tiers) {
+      try {
+        const tiers = JSON.parse(promo.tiers)
+        if (Array.isArray(tiers) && tiers.length > 0) {
+          const totalQty = cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0)
+          // Find the highest applicable tier (sorted by minQty descending)
+          const sortedTiers = [...tiers].sort((a, b) => b.minQty - a.minQty)
+          const applicableTier = sortedTiers.find((t: any) => totalQty >= t.minQty)
+          if (applicableTier && applicableTier.discount > 0) {
+            const targetedSubtotal = getTargetedSubtotal(promo, cartItems)
+            const discount = (targetedSubtotal * applicableTier.discount) / 100
+            return promo.maxDiscount ? Math.min(discount, promo.maxDiscount) : discount
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse tiers:', e)
+      }
+    }
+    
+    // 2. Bundle / Package Deal
+    if (promo.bundleProductIds && promo.bundlePrice) {
+      try {
+        const bundleIds = JSON.parse(promo.bundleProductIds)
+        if (Array.isArray(bundleIds) && bundleIds.length > 0) {
+          // Check if ALL bundle products are in the cart
+          const cartProductIds = cartItems.map((i: any) => i.productId)
+          const hasAllBundleItems = bundleIds.every((id: string) => cartProductIds.includes(id))
+          
+          if (hasAllBundleItems) {
+            // Calculate normal total of just bundle items
+            const bundleItemsNormalTotal = cartItems
+              .filter((i: any) => bundleIds.includes(i.productId))
+              .reduce((sum: number, i: any) => sum + i.subtotal, 0)
+            
+            // Discount = normal price - bundle special price
+            if (bundleItemsNormalTotal > promo.bundlePrice) {
+              return bundleItemsNormalTotal - promo.bundlePrice
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse bundle:', e)
+      }
+    }
+    
+    // 3. Buy X Get Y
+    if (promo.type === 'BUY_X_GET_Y' && promo.buyQuantity && promo.getQuantity) {
+      const buyQty = promo.buyQuantity
+      const getQty = promo.getQuantity
+      
+      // Apply per item in cart
+      let totalFreeValue = 0
+      cartItems.forEach((item: any) => {
+        if (item.quantity >= buyQty) {
+          // For every (buyQty) items bought, (getQty) are free
+          // sets = how many complete sets of (buyQty + getQty) fit in the quantity
+          const setSize = buyQty + getQty
+          const fullSets = Math.floor(item.quantity / setSize)
+          const freeItems = fullSets * getQty
+          
+          // discount per free item = price per item (or promo.value if set)
+          const pricePerItem = item.price
+          const discountPerFreeItem = promo.value > 0 ? promo.value : pricePerItem
+          totalFreeValue += freeItems * discountPerFreeItem
+        }
+      })
+      
+      return totalFreeValue
+    }
+    
+    // Get the applicable subtotal (for targeted or general)
+    const applicableSubtotal = getTargetedSubtotal(promo, cartItems)
+    
+    // 4. Targeted / Category discount (PERCENTAGE or NOMINAL)
+    if (promo.applicableProductIds || promo.applicableCategoryId) {
+      if (promo.type === 'PERCENTAGE') {
+        const discount = (applicableSubtotal * promo.value) / 100
+        return promo.maxDiscount ? Math.min(discount, promo.maxDiscount) : discount
+      } else {
+        return promo.value > applicableSubtotal ? applicableSubtotal : promo.value
+      }
+    }
+    
+    // 5. Default: PERCENTAGE / NOMINAL on total
+    if (subtotal <= 0) return 0
     if (promo.type === 'PERCENTAGE') {
       const discount = (subtotal * promo.value) / 100
       return promo.maxDiscount ? Math.min(discount, promo.maxDiscount) : discount
@@ -383,13 +523,6 @@ export default function POSPage() {
     return () => clearTimeout(delaySearch)
   }, [searchQuery])
 
-  // Auto-check promotions when cart changes
-  useEffect(() => {
-    if (items.length > 0 && promotions.length > 0 && !appliedPromotion) {
-      checkAndApplyPromotion(promotions)
-    }
-  }, [items, promotions])
-
   const handleAddToCart = (product: any) => {
     // Apply auto discount if exists
     let itemDiscount = 0
@@ -408,7 +541,9 @@ export default function POSPage() {
       price: product.sellPrice,
       quantity: 1,
       discount: itemDiscount,
-      sku: product.sku
+      sku: product.sku,
+      categoryId: product.categoryId,
+      categoryName: product.category?.name
     })
 
     if (itemDiscount > 0) {
@@ -953,16 +1088,33 @@ export default function POSPage() {
 
                   {/* Applied Promotion Display */}
                   {appliedPromotion && (
-                    <div className="bg-green-900 border border-green-700 rounded-lg p-3 mb-2">
+                    <div className={`rounded-lg p-3 mb-2 border ${appliedPromotion.isFlashSale ? 'bg-orange-900 border-orange-700 animate-pulse' : 'bg-green-900 border-green-700'}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-semibold text-green-300">{appliedPromotion.name}</p>
                           <p className="text-xs text-green-400">
                             {appliedPromotion.type === 'PERCENTAGE'
                               ? `${appliedPromotion.value}% off`
-                              : `${formatCurrency(appliedPromotion.value)} off`}
+                              : appliedPromotion.type === 'BUY_X_GET_Y'
+                                ? `Buy ${appliedPromotion.buyQuantity} Get ${appliedPromotion.getQuantity} Free`
+                                : appliedPromotion.tiers
+                                  ? 'Volume discount applied'
+                                  : appliedPromotion.bundleProductIds
+                                    ? `Bundle: ${formatCurrency(appliedPromotion.bundlePrice)}`
+                                    : `${formatCurrency(appliedPromotion.value)} off`}
                             {appliedPromotion.maxDiscount && ` (max ${formatCurrency(appliedPromotion.maxDiscount)})`}
                           </p>
+                          {appliedPromotion.isFlashSale && flashSaleCountdown && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-orange-300 font-bold">⏱ Flash Sale ends in:</span>
+                              <span className="text-sm font-mono font-bold text-white bg-orange-800 px-2 py-0.5 rounded">
+                                {flashSaleCountdown}
+                              </span>
+                            </div>
+                          )}
+                          {appliedPromotion.applicableCategoryId && (
+                            <p className="text-xs text-purple-400 mt-1">🎯 Targeted promotion</p>
+                          )}
                         </div>
                         <button
                           onClick={removePromotion}

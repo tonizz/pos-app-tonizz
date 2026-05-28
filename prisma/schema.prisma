@@ -355,6 +355,27 @@ model Promotion {
   minPurchase Float?
   maxDiscount Float?
   voucherCode String?       @unique
+
+  // Buy X Get Y fields
+  buyQuantity  Int?
+  getQuantity  Int?
+  freeProductId String?
+
+  // Item/Category level discount
+  applicableProductIds String?  // JSON array of product IDs
+  applicableCategoryId String?
+
+  // Tiered / Volume discount
+  tiers        String?          // JSON array: [{"minQty":1,"discount":0,"label":"1-2 pcs"},{"minQty":3,"discount":5,"label":"3-5 pcs"}]
+
+  // Flash Sale
+  isFlashSale  Boolean       @default(false)
+  flashSaleEndTime DateTime?
+
+  // Bundle
+  bundleProductIds String?   // JSON array of product IDs for bundle
+  bundlePrice    Float?
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }

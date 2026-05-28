@@ -10,6 +10,8 @@ interface CartItem {
   discount: number
   subtotal: number
   sku: string
+  categoryId?: string
+  categoryName?: string
 }
 
 interface CartStore {
