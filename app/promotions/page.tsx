@@ -42,6 +42,116 @@ interface Promotion {
   createdAt: string
 }
 
+// ── Product Multi-Selector Component ──
+const ProductSelector = ({
+  selectedIds,
+  onChange,
+  allProducts: products,
+  placeholder = 'Search products...'
+}: {
+  selectedIds: string
+  onChange: (val: string) => void
+  allProducts: any[]
+  placeholder?: string
+}) => {
+  const [search, setSearch] = useState('')
+
+  // Parse selected IDs from string (JSON array or comma-separated)
+  const getSelectedArray = (): string[] => {
+    if (!selectedIds || !selectedIds.trim()) return []
+    try {
+      const parsed = JSON.parse(selectedIds)
+      if (Array.isArray(parsed)) return parsed
+    } catch {}
+    return selectedIds.split(',').map(s => s.trim()).filter(Boolean)
+  }
+
+  const selected = getSelectedArray()
+  const selectedProducts = products.filter((p: any) => selected.includes(p.id))
+
+  const filtered = products.filter((p: any) =>
+    !search ||
+    (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
+    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  const toggleProduct = (productId: string) => {
+    const current = getSelectedArray()
+    const updated = current.includes(productId)
+      ? current.filter(id => id !== productId)
+      : [...current, productId]
+    onChange(updated.join(','))
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Search input */}
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+      />
+
+      {/* Selected products as chips */}
+      {selectedProducts.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedProducts.map((p: any) => (
+            <span
+              key={p.id}
+              onClick={() => toggleProduct(p.id)}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-900 text-blue-300 rounded-full text-xs cursor-pointer hover:bg-blue-800 transition-colors"
+            >
+              {p.name}
+              <span className="text-blue-400 ml-0.5 font-bold">×</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Filtered product list */}
+      <div className="max-h-36 overflow-y-auto space-y-0.5 bg-gray-900 rounded-lg p-1.5 border border-gray-700">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-gray-500 py-2 text-center">No products found</p>
+        ) : (
+          filtered.slice(0, 40).map((p: any) => {
+            const isSelected = selected.includes(p.id)
+            return (
+              <label
+                key={p.id}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm ${
+                  isSelected ? 'bg-blue-900 bg-opacity-40' : 'hover:bg-gray-800'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleProduct(p.id)}
+                  className="rounded border-gray-500"
+                />
+                <div className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="text-white truncate">{p.name}</span>
+                  <span className="text-gray-500 text-xs ml-2 shrink-0">{p.sku || ''}</span>
+                </div>
+                <span className="text-blue-400 text-xs shrink-0">{formatCurrency(p.sellPrice)}</span>
+              </label>
+            )
+          })
+        )}
+        {filtered.length > 40 && (
+          <p className="text-xs text-gray-500 text-center py-1">...and {filtered.length - 40} more</p>
+        )}
+      </div>
+
+      {/* Selected count indicator */}
+      {selected.length > 0 && (
+        <p className="text-xs text-gray-400">{selected.length} product{selected.length !== 1 ? 's' : ''} selected</p>
+      )}
+    </div>
+  )
+}
+
 export default function PromotionsPage() {
   const router = useRouter()
   const { token, user, isAuthenticated, _hasHydrated } = useAuthStore()
@@ -668,20 +778,18 @@ export default function PromotionsPage() {
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">
-                      Product IDs (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.applicableProductIds}
-                      onChange={(e) => setFormData({ ...formData, applicableProductIds: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. prod-id-1, prod-id-2, prod-id-3"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Comma-separated product IDs (leave empty for all products)</p>
-                  </div>
+                  </div>                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Specific Products
+                      </label>
+                      <ProductSelector
+                        selectedIds={formData.applicableProductIds}
+                        onChange={(val) => setFormData({ ...formData, applicableProductIds: val })}
+                        allProducts={allProducts}
+                        placeholder="Search products by name or SKU..."
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Search and select specific products for this promotion (leave empty for all products)</p>
+                    </div>
                 </div>
               </details>
 
@@ -691,19 +799,18 @@ export default function PromotionsPage() {
                   📦 Bundle / Package Deal (Optional)
                 </summary>
                 <div className="p-4 space-y-3 border-t border-gray-600">
-                  <p className="text-xs text-gray-400">Set a special price when multiple products are bought together as a bundle.</p>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">
-                      Bundle Product IDs (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.bundleProductIds}
-                      onChange={(e) => setFormData({ ...formData, bundleProductIds: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. prod-id-1, prod-id-2"
-                    />
-                  </div>
+                  <p className="text-xs text-gray-400">Set a special price when multiple products are bought together as a bundle.</p>                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Bundle Products
+                      </label>
+                      <ProductSelector
+                        selectedIds={formData.bundleProductIds}
+                        onChange={(val) => setFormData({ ...formData, bundleProductIds: val })}
+                        allProducts={allProducts}
+                        placeholder="Search products by name or SKU..."
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Search and select products to include in the bundle</p>
+                    </div>
                   <div>
                     <label className="block text-sm font-medium mb-2 text-gray-300">
                       Bundle Price
