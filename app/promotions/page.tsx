@@ -193,6 +193,87 @@ export default function PromotionsPage() {
     bundlePrice: ''
   })
 
+  // Tab UI State
+  const [activeTab, setActiveTab] = useState<'general' | 'rules' | 'advanced'>('general')
+
+  // Toggle states untuk modul Paket dan Tier
+  const [isBundleActive, setIsBundleActive] = useState(false)
+  const [isTieredActive, setIsTieredActive] = useState(false)
+
+  // Visual Tiers state
+  interface Tier {
+    minQty: number
+    discount: number
+    label: string
+  }
+  const [localTiers, setLocalTiers] = useState<Tier[]>([])
+
+  // Bundle builder states
+  const [bundleSearch, setBundleSearch] = useState('')
+  const [selectedBundleItems, setSelectedBundleItems] = useState<any[]>([])
+
+  // Computed values for bundle deal
+  const filteredBundleProducts = allProducts.filter((p: any) => {
+    const isAlreadySelected = selectedBundleItems.some((item) => item.id === p.id)
+    if (isAlreadySelected) return false
+    if (!bundleSearch.trim()) return false
+    return (
+      p.name.toLowerCase().includes(bundleSearch.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(bundleSearch.toLowerCase())) ||
+      (p.barcode && p.barcode.toLowerCase().includes(bundleSearch.toLowerCase()))
+    )
+  })
+
+  const totalBundleNormalPrice = selectedBundleItems.reduce((sum, item) => sum + item.sellPrice, 0)
+  const bundlePriceNum = parseFloat(formData.bundlePrice) || 0
+  const bundleSavings = totalBundleNormalPrice > bundlePriceNum ? totalBundleNormalPrice - bundlePriceNum : 0
+  const bundleSavingsPercent = totalBundleNormalPrice > 0 ? Math.round((bundleSavings / totalBundleNormalPrice) * 100) : 0
+
+  // Sync toggles when modal opens or bundle/tiers states change
+  useEffect(() => {
+    if (showModal) {
+      setIsBundleActive(selectedBundleItems.length > 0)
+      setIsTieredActive(localTiers.length > 0)
+    }
+  }, [showModal])
+
+  // Date formatting helpers
+  const formatDateToHTMLDate = (dateString: string | null | Date) => {
+    if (!dateString) return ''
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return ''
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatDateToHTMLDatetime = (dateString: string | null | Date) => {
+    if (!dateString) return ''
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return ''
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
+  const parseDateFromInput = (dateStr: string) => {
+    if (!dateStr || !dateStr.includes('-')) return new Date()
+    const parts = dateStr.split('-')
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD
+      const [year, month, day] = parts.map(Number)
+      return new Date(year, month - 1, day)
+    } else {
+      // DD-MM-YYYY
+      const [day, month, year] = parts.map(Number)
+      return new Date(year, month - 1, day)
+    }
+  }
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -263,17 +344,17 @@ export default function PromotionsPage() {
   }, [searchQuery])
 
   const handleOpenModal = (promo?: Promotion) => {
+    setActiveTab('general')
+    setBundleSearch('')
+    
     if (promo) {
       setEditingPromo(promo)
-      const startDate = new Date(promo.startDate)
-      const endDate = new Date(promo.endDate)
-      const flashEnd = promo.flashSaleEndTime ? new Date(promo.flashSaleEndTime) : null
       setFormData({
         name: promo.name,
         type: promo.type,
         value: promo.value.toString(),
-        startDate: formatDateForInput(startDate),
-        endDate: formatDateForInput(endDate),
+        startDate: formatDateToHTMLDate(promo.startDate),
+        endDate: formatDateToHTMLDate(promo.endDate),
         isActive: promo.isActive,
         minPurchase: promo.minPurchase?.toString() || '',
         maxDiscount: promo.maxDiscount?.toString() || '',
@@ -284,10 +365,31 @@ export default function PromotionsPage() {
         applicableCategoryId: promo.applicableCategoryId || '',
         tiers: promo.tiers || '',
         isFlashSale: promo.isFlashSale,
-        flashSaleEndDateTime: flashEnd ? formatDateForInput(flashEnd) + ' ' + String(flashEnd.getHours()).padStart(2,'0') + ':' + String(flashEnd.getMinutes()).padStart(2,'0') : '',
+        flashSaleEndDateTime: promo.flashSaleEndTime ? formatDateToHTMLDatetime(promo.flashSaleEndTime) : '',
         bundleProductIds: promo.bundleProductIds || '',
         bundlePrice: promo.bundlePrice?.toString() || ''
       })
+
+      // Set bundle items state
+      let bundleIds: string[] = []
+      if (promo.bundleProductIds) {
+        try {
+          const parsed = JSON.parse(promo.bundleProductIds)
+          if (Array.isArray(parsed)) bundleIds = parsed
+        } catch {
+          bundleIds = promo.bundleProductIds.split(',').map(s => s.trim()).filter(Boolean)
+        }
+      }
+      const matchedProducts = allProducts.filter((p: any) => bundleIds.includes(p.id))
+      setSelectedBundleItems(matchedProducts)
+
+      // Set tiers state
+      try {
+        const parsed = JSON.parse(promo.tiers || '[]')
+        setLocalTiers(Array.isArray(parsed) ? parsed : [])
+      } catch {
+        setLocalTiers([])
+      }
     } else {
       setEditingPromo(null)
       const today = new Date()
@@ -297,8 +399,8 @@ export default function PromotionsPage() {
         name: '',
         type: 'PERCENTAGE',
         value: '',
-        startDate: formatDateForInput(today),
-        endDate: formatDateForInput(tomorrow),
+        startDate: formatDateToHTMLDate(today),
+        endDate: formatDateToHTMLDate(tomorrow),
         isActive: true,
         minPurchase: '',
         maxDiscount: '',
@@ -313,26 +415,17 @@ export default function PromotionsPage() {
         bundleProductIds: '',
         bundlePrice: ''
       })
+      setSelectedBundleItems([])
+      setLocalTiers([])
     }
     setShowModal(true)
-  }
-
-  const formatDateForInput = (date: Date) => {
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}-${month}-${year}`
-  }
-
-  const parseDateFromInput = (dateStr: string) => {
-    // Parse DD-MM-YYYY to Date object
-    const [day, month, year] = dateStr.split('-').map(Number)
-    return new Date(year, month - 1, day)
   }
 
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingPromo(null)
+    setSelectedBundleItems([])
+    setLocalTiers([])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -345,13 +438,11 @@ export default function PromotionsPage() {
 
       const method = editingPromo ? 'PUT' : 'POST'
 
-      // Parse DD-MM-YYYY to ISO date
       const startDate = parseDateFromInput(formData.startDate)
       const endDate = parseDateFromInput(formData.endDate)
 
-      // Validate dates
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        toast.error('Invalid date format. Use DD-MM-YYYY')
+        toast.error('Invalid date format')
         return
       }
 
@@ -360,22 +451,30 @@ export default function PromotionsPage() {
         return
       }
 
-      // Parse flash sale end time if present
       let flashSaleEndTime = null
       if (formData.isFlashSale && formData.flashSaleEndDateTime) {
-        // Format: "DD-MM-YYYY HH:mm"
-        const parts = formData.flashSaleEndDateTime.split(' ')
-        if (parts.length === 2) {
-          const datePart = parseDateFromInput(parts[0])
-          const timePart = parts[1].split(':')
-          if (!isNaN(datePart.getTime()) && timePart.length === 2) {
-            datePart.setHours(parseInt(timePart[0]), parseInt(timePart[1]))
-            flashSaleEndTime = datePart.toISOString()
+        if (formData.flashSaleEndDateTime.includes('T')) {
+          const [datePart, timePart] = formData.flashSaleEndDateTime.split('T')
+          const [year, month, day] = datePart.split('-').map(Number)
+          const [hours, minutes] = timePart.split(':').map(Number)
+          const dateObj = new Date(year, month - 1, day, hours, minutes)
+          if (!isNaN(dateObj.getTime())) {
+            flashSaleEndTime = dateObj.toISOString()
+          }
+        } else {
+          // Fallback old format
+          const parts = formData.flashSaleEndDateTime.split(' ')
+          if (parts.length === 2) {
+            const datePart = parseDateFromInput(parts[0])
+            const timePart = parts[1].split(':')
+            if (!isNaN(datePart.getTime()) && timePart.length === 2) {
+              datePart.setHours(parseInt(timePart[0]), parseInt(timePart[1]))
+              flashSaleEndTime = datePart.toISOString()
+            }
           }
         }
       }
 
-      // Convert comma-separated product/bundle IDs to JSON arrays
       const toJsonArray = (val: string) => {
         if (!val || !val.trim()) return null
         const parts = val.split(',').map(s => s.trim()).filter(Boolean)
@@ -394,8 +493,8 @@ export default function PromotionsPage() {
           endDate: endDate.toISOString(),
           flashSaleEndTime,
           applicableProductIds: toJsonArray(formData.applicableProductIds),
-          bundleProductIds: toJsonArray(formData.bundleProductIds),
-          tiers: formData.tiers && formData.tiers.trim() ? formData.tiers : null
+          bundleProductIds: selectedBundleItems.length > 0 ? JSON.stringify(selectedBundleItems.map(p => p.id)) : null,
+          tiers: localTiers.length > 0 ? JSON.stringify(localTiers) : null
         })
       })
 
@@ -644,393 +743,649 @@ export default function PromotionsPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-bold text-white">
-                {editingPromo ? 'Edit Promotion' : 'Add New Promotion'}
-              </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full border border-gray-700 max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gray-850">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {editingPromo ? '✏️ Edit Promosi' : '✨ Tambah Promosi Baru'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Konfigurasi diskon, voucher, paket bundle, dan flash sale</p>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-lg transition-colors"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Promotion Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+            {/* Premium Tabs Menu */}
+            <div className="flex border-b border-gray-700 bg-gray-900/40 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('general')}
+                className={`flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'general'
+                    ? 'border-blue-500 text-blue-400 bg-gray-800/60'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'
+                }`}
+              >
+                📋 Info Dasar
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rules')}
+                className={`flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'rules'
+                    ? 'border-blue-500 text-blue-400 bg-gray-800/60'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'
+                }`}
+              >
+                ⚙️ Aturan Diskon
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('advanced')}
+                className={`flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'advanced'
+                    ? 'border-blue-500 text-blue-400 bg-gray-800/60'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'
+                }`}
+              >
+                🎯 Target & Lanjutan
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Type *
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as Promotion['type'] })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="PERCENTAGE">Percentage</option>
-                    <option value="NOMINAL">Nominal</option>
-                    <option value="VOUCHER">Voucher</option>
-                    <option value="BUY_X_GET_Y">Buy X Get Y</option>
-                  </select>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formData.type === 'BUY_X_GET_Y' ? 'Configure buy & get qty below' : formData.type === 'VOUCHER' ? 'Uses voucher code' : 'Discount on total'}
-                  </p>
-                </div>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+              
+              {/* === TAB 1: GENERAL INFO === */}
+              {activeTab === 'general' && (
+                <div className="space-y-4 animate-in slide-in-from-left-4 duration-200">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                      Nama Promosi *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. Diskon Akhir Tahun 2026"
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-500"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Value{formData.type !== 'BUY_X_GET_Y' ? ' *' : ''}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.value}
-                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required={formData.type !== 'BUY_X_GET_Y'}
-                    placeholder={formData.type === 'PERCENTAGE' ? 'e.g. 10 for 10%' : formData.type === 'NOMINAL' ? 'e.g. 10000' : 'Discount value'}
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formData.type === 'PERCENTAGE' ? 'Percentage value (e.g. 10 = 10%)' :
-                     formData.type === 'NOMINAL' ? 'Nominal amount in Rp' :
-                     formData.type === 'BUY_X_GET_Y' ? 'Discount amount for the free item(s)' :
-                     'Discount value'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Buy X Get Y Configuration */}
-              {formData.type === 'BUY_X_GET_Y' && (
-                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 space-y-4">
-                  <h4 className="text-sm font-semibold text-orange-400">Buy X Get Y Configuration</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Buy Quantity (X) *
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Tanggal Mulai *
                       </label>
                       <input
-                        type="number"
-                        min="1"
-                        value={formData.buyQuantity}
-                        onChange={(e) => setFormData({ ...formData, buyQuantity: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 2"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                         required
                       />
-                      <p className="text-xs text-gray-400 mt-1">Customer must buy this many</p>
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Get Quantity (Y) *
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Tanggal Berakhir *
                       </label>
                       <input
-                        type="number"
-                        min="1"
-                        value={formData.getQuantity}
-                        onChange={(e) => setFormData({ ...formData, getQuantity: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 1"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                         required
                       />
-                      <p className="text-xs text-gray-400 mt-1">Free items given</p>
                     </div>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-xs text-gray-400">
-                      <span className="text-orange-400 font-semibold">How it works:</span> Jika customer membeli <strong>{formData.buyQuantity || 'X'}</strong> item, maka mendapat <strong>{formData.getQuantity || 'Y'}</strong> item gratis (senilai <strong>Rp{parseFloat(formData.value || '0').toLocaleString('id-ID')}</strong> diskon per unit gratis).
-                    </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Minimal Pembelian (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.minPurchase}
+                        onChange={(e) => setFormData({ ...formData, minPurchase: e.target.value })}
+                        placeholder="Optional (e.g. 50000)"
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-500"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">Promo aktif jika transaksi menyentuh nominal ini</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Maksimal Potongan Diskon (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.maxDiscount}
+                        onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
+                        placeholder="Optional (e.g. 20000)"
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-500"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">Batas maksimal potongan untuk tipe diskon persentase</p>
+                    </div>
+                  </div>
+
+                  {/* Status Toggle Card */}
+                  <div className="bg-gray-700/60 border border-gray-600 rounded-lg p-4 mt-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label htmlFor="isActive" className="text-sm font-semibold text-gray-200 cursor-pointer">
+                          Status Promosi Aktif
+                        </label>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formData.isActive ? '✅ Promosi berjalan dan akan langsung diterapkan otomatis' : '❌ Promosi di-nonaktifkan sementara'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold ${formData.isActive ? 'text-green-400' : 'text-gray-400'}`}>
+                          {formData.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            id="isActive"
+                            checked={formData.isActive}
+                            onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-10 h-5.5 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Target Products / Categories */}
-              <details className="bg-gray-700 border border-gray-600 rounded-lg">
-                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-                  🎯 Target Products / Categories (Optional)
-                </summary>
-                <div className="p-4 space-y-3 border-t border-gray-600">
-                  <p className="text-xs text-gray-400">Limit this promotion to specific products or categories. Leave empty to apply to all.</p>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">Category</label>
-                    <select
-                      value={formData.applicableCategoryId}
-                      onChange={(e) => setFormData({ ...formData, applicableCategoryId: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All Categories</option>
-                      {allCategories.map((cat: any) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Specific Products
+              {/* === TAB 2: RULES AND CODES === */}
+              {activeTab === 'rules' && (
+                <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Tipe Promosi *
                       </label>
-                      <ProductSelector
-                        selectedIds={formData.applicableProductIds}
-                        onChange={(val) => setFormData({ ...formData, applicableProductIds: val })}
-                        allProducts={allProducts}
-                        placeholder="Search products by name or SKU..."
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Search and select specific products for this promotion (leave empty for all products)</p>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value as Promotion['type'] })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                        required
+                      >
+                        <option value="PERCENTAGE">Persentase (%)</option>
+                        <option value="NOMINAL">Nominal Rupiah (Rp)</option>
+                        <option value="VOUCHER">Kode Voucher Khusus</option>
+                        <option value="BUY_X_GET_Y">Beli X Gratis Y (BXGY)</option>
+                      </select>
                     </div>
-                </div>
-              </details>
 
-              {/* Bundle Configuration */}
-              <details className="bg-gray-700 border border-gray-600 rounded-lg">
-                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-                  📦 Bundle / Package Deal (Optional)
-                </summary>
-                <div className="p-4 space-y-3 border-t border-gray-600">
-                  <p className="text-xs text-gray-400">Set a special price when multiple products are bought together as a bundle.</p>                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Bundle Products
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-gray-300">
+                        Nilai Potongan {formData.type !== 'BUY_X_GET_Y' ? ' *' : ''}
                       </label>
-                      <ProductSelector
-                        selectedIds={formData.bundleProductIds}
-                        onChange={(val) => setFormData({ ...formData, bundleProductIds: val })}
-                        allProducts={allProducts}
-                        placeholder="Search products by name or SKU..."
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.value}
+                        onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-sm placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={formData.type === 'BUY_X_GET_Y'}
+                        required={formData.type !== 'BUY_X_GET_Y'}
+                        placeholder={
+                          formData.type === 'PERCENTAGE' ? 'e.g. 10 (artinya diskon 10%)' : 
+                          formData.type === 'NOMINAL' ? 'e.g. 15000 (diskon Rp15.000)' : 
+                          formData.type === 'VOUCHER' ? 'e.g. 20000 (diskon Rp20.000)' :
+                          'Diatur di konfigurasi BXGY'
+                        }
                       />
-                      <p className="text-xs text-gray-400 mt-1">Search and select products to include in the bundle</p>
                     </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-300">
-                      Bundle Price
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.bundlePrice}
-                      onChange={(e) => setFormData({ ...formData, bundlePrice: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Special price for bundle"
-                    />
                   </div>
-                </div>
-              </details>
 
-              {/* Tiered / Volume Discount */}
-              <details className="bg-gray-700 border border-gray-600 rounded-lg">
-                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-                  📊 Tiered / Volume Discount (Optional)
-                </summary>
-                <div className="p-4 space-y-3 border-t border-gray-600">
-                  <p className="text-xs text-gray-400">Offer increasing discounts based on quantity purchased. Format: JSON array of tiers.</p>
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-xs text-gray-400 mb-2">Example format:</p>
-                    <pre className="text-xs text-green-400 font-mono">
-{`[
-  {"minQty": 1, "discount": 0, "label": "1-2 pcs"},
-  {"minQty": 3, "discount": 5, "label": "3-5 pcs (5% off)"},
-  {"minQty": 6, "discount": 10, "label": "6+ pcs (10% off)"}
-]`}
-                    </pre>
-                  </div>
-                  <textarea
-                    value={formData.tiers}
-                    onChange={(e) => setFormData({ ...formData, tiers: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                    rows={6}
-                    placeholder='[{&quot;minQty&quot;:1,&quot;discount&quot;:0,&quot;label&quot;:&quot;1-2 pcs&quot;},{&quot;minQty&quot;:3,&quot;discount&quot;:5,&quot;label&quot;:&quot;3-5 pcs&quot;}]'
-                  />
-                  {formData.tiers && (() => {
-                    try {
-                      const parsed = JSON.parse(formData.tiers)
-                      return (
-                        <div className="bg-gray-800 rounded-lg p-3">
-                          <p className="text-xs text-gray-400 mb-2">Preview ({parsed.length} tiers):</p>
-                          <div className="space-y-1">
-                            {parsed.map((tier: any, i: number) => (
-                              <div key={i} className="flex justify-between text-xs">
-                                <span className="text-gray-300">{tier.label || `${tier.minQty}+ items`}</span>
-                                <span className="text-green-400">{tier.discount}% off</span>
-                              </div>
-                            ))}
-                          </div>
+                  {/* Voucher Code Block */}
+                  {formData.type === 'VOUCHER' && (
+                    <div className="bg-purple-950/20 border border-purple-900/50 rounded-xl p-5 space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <Tag size={16} className="text-purple-400" />
+                        <h4 className="text-sm font-semibold text-purple-300">Pengaturan Voucher Code</h4>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">
+                          Kode Voucher *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.voucherCode}
+                          onChange={(e) => setFormData({ ...formData, voucherCode: e.target.value.toUpperCase() })}
+                          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm placeholder-purple-900/50"
+                          placeholder="e.g. DISKONMANTAP26"
+                          required
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Kode yang harus diketik kasir di halaman POS untuk mengaktifkan promo ini</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Buy X Get Y Configuration */}
+                  {formData.type === 'BUY_X_GET_Y' && (
+                    <div className="bg-orange-950/20 border border-orange-900/50 rounded-xl p-5 space-y-4 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <Gift size={16} className="text-orange-400" />
+                        <h4 className="text-sm font-semibold text-orange-300">Pengaturan Beli X Gratis Y</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 mb-1">
+                            Beli Jumlah (X) *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.buyQuantity}
+                            onChange={(e) => setFormData({ ...formData, buyQuantity: e.target.value })}
+                            className="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                            placeholder="e.g. 2"
+                            required
+                          />
+                          <p className="text-[10px] text-gray-400 mt-1">Jumlah produk wajib beli</p>
                         </div>
-                      )
-                    } catch {
-                      return <p className="text-xs text-red-400">Invalid JSON format</p>
-                    }
-                  })()}
-                </div>
-              </details>
-
-              {/* Flash Sale */}
-              <details className="bg-gray-700 border border-gray-600 rounded-lg">
-                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-                  ⚡ Flash Sale Timer (Optional)
-                </summary>
-                <div className="p-4 space-y-3 border-t border-gray-600">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-300">Enable Flash Sale Timer</p>
-                      <p className="text-xs text-gray-400">Show a countdown timer on the POS screen</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.isFlashSale}
-                        onChange={(e) => setFormData({ ...formData, isFlashSale: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                    </label>
-                  </div>
-
-                  {formData.isFlashSale && (
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Flash Sale End Date & Time
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.flashSaleEndDateTime}
-                        onChange={(e) => setFormData({ ...formData, flashSaleEndDateTime: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                        placeholder="DD-MM-YYYY HH:mm (e.g. 31-12-2026 23:59)"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">Format: Tanggal-Bulan-Tahun Jam:Menit</p>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 mb-1">
+                            Gratis Jumlah (Y) *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.getQuantity}
+                            onChange={(e) => setFormData({ ...formData, getQuantity: e.target.value })}
+                            className="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                            placeholder="e.g. 1"
+                            required
+                          />
+                          <p className="text-[10px] text-gray-400 mt-1">Jumlah barang gratis didapat</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-900/60 p-3 rounded-lg border border-gray-800">
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          💡 **Cara Kerja:** Setiap kali pembeli mengambil sebanyak **{formData.buyQuantity || 'X'}** item dari produk yang sama, maka **{formData.getQuantity || 'Y'}** item berikutnya akan digratiskan secara otomatis di sistem kasir.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </details>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Start Date *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    placeholder="DD-MM-YYYY (e.g., 01-05-2026)"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Format: Tanggal-Bulan-Tahun</p>
-                </div>
+              {/* === TAB 3: TARGETING & ADVANCED FEATURES === */}
+              {activeTab === 'advanced' && (
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-200">
+                  
+                  {/* 🎯 TARGET PENERAPAN */}
+                  <div className="bg-gray-750 border border-gray-700 rounded-xl p-5 space-y-4">
+                    <h4 className="text-sm font-semibold text-blue-400 flex items-center gap-1.5">
+                      🎯 Target Penerapan Promosi (Optional)
+                    </h4>
+                    <p className="text-xs text-gray-400">Batasi promo ini hanya untuk kategori barang atau produk tertentu saja. Kosongkan untuk menerapkan ke semua barang.</p>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">Berdasarkan Kategori</label>
+                        <select
+                          value={formData.applicableCategoryId}
+                          onChange={(e) => setFormData({ ...formData, applicableCategoryId: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-750 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
+                        >
+                          <option value="">Semua Kategori</option>
+                          {allCategories.map((cat: any) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    End Date *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    placeholder="DD-MM-YYYY (e.g., 02-05-2026)"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Format: Tanggal-Bulan-Tahun</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Min Purchase
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.minPurchase}
-                    onChange={(e) => setFormData({ ...formData, minPurchase: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Optional"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-300">
-                    Max Discount
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.maxDiscount}
-                    onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Voucher Code
-                </label>
-                <input
-                  type="text"
-                  value={formData.voucherCode}
-                  onChange={(e) => setFormData({ ...formData, voucherCode: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 font-mono"
-                  placeholder="Optional (e.g., PROMO2026)"
-                />
-              </div>
-
-              <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label htmlFor="isActive" className="text-sm font-medium text-gray-300 cursor-pointer">
-                      Promotion Status
-                    </label>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {formData.isActive ? 'This promotion is active and will be applied automatically' : 'This promotion is inactive and will not be applied'}
-                    </p>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">
+                          Berdasarkan Produk Spesifik
+                        </label>
+                        <ProductSelector
+                          selectedIds={formData.applicableProductIds}
+                          onChange={(val) => setFormData({ ...formData, applicableProductIds: val })}
+                          allProducts={allProducts}
+                          placeholder="Ketik nama atau SKU untuk memfilter..."
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-semibold ${formData.isActive ? 'text-green-400' : 'text-gray-500'}`}>
-                      {formData.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="isActive"
-                        checked={formData.isActive}
-                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex gap-3 pt-4">
+                  <hr className="border-gray-700" />
+
+                  {/* 📦 BUNDLE BUILDER SECTION (PROMO PAKET) */}
+                  <div className="border border-gray-700 rounded-xl overflow-hidden bg-gray-900/20">
+                    <div className="flex items-center justify-between p-4 bg-gray-750 border-b border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📦</span>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Promo Paket (Bundle Deal)</h4>
+                          <p className="text-[10px] text-gray-400">Jual paket gabungan beberapa produk dengan harga diskon khusus</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isBundleActive}
+                          onChange={(e) => {
+                            setIsBundleActive(e.target.checked)
+                            if (!e.target.checked) {
+                              setSelectedBundleItems([])
+                              setFormData({ ...formData, bundlePrice: '' })
+                            }
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {isBundleActive && (
+                      <div className="p-5 space-y-4 bg-gray-800/40 animate-in slide-in-from-top duration-200">
+                        {/* Autocomplete Search */}
+                        <div className="relative">
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                            Cari Produk Paket
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-gray-500" size={14} />
+                            <input
+                              type="text"
+                              value={bundleSearch}
+                              onChange={(e) => setBundleSearch(e.target.value)}
+                              placeholder="Ketik nama barang, SKU, atau barcode..."
+                              className="w-full pl-9 pr-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
+                            />
+                          </div>
+
+                          {/* Search Dropdown */}
+                          {bundleSearch.trim() && (
+                            <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 p-1.5 space-y-0.5">
+                              {filteredBundleProducts.length === 0 ? (
+                                <p className="text-xs text-gray-500 py-3 text-center">Produk tidak ada / sudah masuk paket</p>
+                              ) : (
+                                filteredBundleProducts.slice(0, 8).map((product: any) => (
+                                  <button
+                                    key={product.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedBundleItems([...selectedBundleItems, product])
+                                      setBundleSearch('')
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 rounded hover:bg-blue-900/40 hover:text-blue-200 text-xs text-gray-300 flex justify-between items-center transition-colors"
+                                  >
+                                    <div className="min-w-0 pr-2">
+                                      <p className="font-medium truncate text-white">{product.name}</p>
+                                      <p className="text-[9px] text-gray-500 truncate">{product.sku || 'No SKU'}</p>
+                                    </div>
+                                    <span className="text-blue-400 font-semibold shrink-0">{formatCurrency(product.sellPrice)}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Selected Bundle Items */}
+                        {selectedBundleItems.length === 0 ? (
+                          <div className="text-center py-6 bg-gray-900/20 rounded-lg border border-dashed border-gray-700">
+                            <p className="text-xs text-gray-500">Belum ada barang di dalam paket bundle ini.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden divide-y divide-gray-800 max-h-36 overflow-y-auto">
+                              {selectedBundleItems.map((item, idx) => (
+                                <div key={item.id} className="flex justify-between items-center p-2.5 hover:bg-gray-850/30">
+                                  <div className="min-w-0 pr-2">
+                                    <p className="text-xs text-white font-medium truncate">{item.name}</p>
+                                    <p className="text-[10px] text-gray-500 font-mono">{item.sku || 'No SKU'}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2.5 shrink-0">
+                                    <span className="text-xs font-semibold text-gray-300">{formatCurrency(item.sellPrice)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedBundleItems(selectedBundleItems.filter((_, i) => i !== idx))
+                                      }}
+                                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-950/20 rounded"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Bundle Stats & Calculator */}
+                            <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="flex flex-col justify-center">
+                                <span className="text-[10px] text-gray-400 font-semibold uppercase">Total Harga Normal:</span>
+                                <span className="text-base font-bold text-white mt-0.5">{formatCurrency(totalBundleNormalPrice)}</span>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] text-gray-400 font-semibold uppercase mb-1">
+                                  Harga Paket Baru (Rp) *
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={formData.bundlePrice}
+                                  onChange={(e) => setFormData({ ...formData, bundlePrice: e.target.value })}
+                                  placeholder="Harga Paket Baru"
+                                  className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 text-white font-bold rounded focus:ring-1 focus:ring-blue-500 text-xs"
+                                  required={isBundleActive && selectedBundleItems.length > 0}
+                                />
+                              </div>
+
+                              {/* Customer Savings */}
+                              {selectedBundleItems.length > 0 && formData.bundlePrice && (
+                                <div className="sm:col-span-2 border-t border-gray-850 pt-2 flex items-center justify-between">
+                                  <span className="text-[10px] text-gray-400">Hemat Pelanggan:</span>
+                                  {bundleSavings > 0 ? (
+                                    <span className="text-xs font-bold text-green-400 bg-green-950/30 px-2 py-0.5 rounded border border-green-900/30">
+                                      Hemat {formatCurrency(bundleSavings)} ({bundleSavingsPercent}% Off)
+                                    </span>
+                                  ) : bundleSavings === 0 && totalBundleNormalPrice === bundlePriceNum ? (
+                                    <span className="text-[10px] text-gray-500">Sama dengan harga normal</span>
+                                  ) : (
+                                    <span className="text-[10px] text-yellow-400 font-semibold bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">
+                                      ⚠️ Harga paket lebih mahal!
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 📊 TIERED DISCOUNT SECTION (DISKON VOLUME) */}
+                  <div className="border border-gray-700 rounded-xl overflow-hidden bg-gray-900/20">
+                    <div className="flex items-center justify-between p-4 bg-gray-750 border-b border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📊</span>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Diskon Volume Bertingkat (Tiered)</h4>
+                          <p className="text-[10px] text-gray-400">Atur diskon grosir (makin banyak beli, makin besar diskonnya)</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isTieredActive}
+                          onChange={(e) => {
+                            setIsTieredActive(e.target.checked)
+                            if (!e.target.checked) {
+                              setLocalTiers([])
+                            } else if (localTiers.length === 0) {
+                              setLocalTiers([{ minQty: 3, discount: 5, label: '3+ pcs' }])
+                            }
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {isTieredActive && (
+                      <div className="p-5 space-y-4 bg-gray-800/40 animate-in slide-in-from-top duration-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-semibold text-gray-400">Atur Tingkat Diskon:</span>
+                          <button
+                            type="button"
+                            onClick={() => setLocalTiers([...localTiers, { minQty: 5, discount: 10, label: '' }])}
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold flex items-center gap-1 transition-all"
+                          >
+                            <Plus size={10} /> Tambah Tingkat
+                          </button>
+                        </div>
+
+                        {localTiers.length === 0 ? (
+                          <div className="text-center py-4 bg-gray-900/10 rounded-lg border border-dashed border-gray-700">
+                            <p className="text-xs text-gray-500">Belum ada tingkatan diskon.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {localTiers.map((tier, idx) => (
+                              <div key={idx} className="flex items-center gap-2 bg-gray-900/60 p-2 rounded border border-gray-700">
+                                <div className="grid grid-cols-3 gap-2 flex-1">
+                                  <div>
+                                    <span className="block text-[8px] text-gray-500 font-bold uppercase mb-0.5">Min Qty</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={tier.minQty}
+                                      onChange={(e) => {
+                                        const updated = [...localTiers]
+                                        updated[idx].minQty = parseInt(e.target.value) || 1
+                                        if (!updated[idx].label || updated[idx].label.match(/^\d+\+ pcs/)) {
+                                          updated[idx].label = `${updated[idx].minQty}+ pcs`
+                                        }
+                                        setLocalTiers(updated)
+                                      }}
+                                      className="w-full px-2 py-1 bg-gray-850 border border-gray-700 text-white text-[11px] rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="block text-[8px] text-gray-500 font-bold uppercase mb-0.5">Diskon (%)</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={tier.discount}
+                                      onChange={(e) => {
+                                        const updated = [...localTiers]
+                                        updated[idx].discount = parseFloat(e.target.value) || 0
+                                        setLocalTiers(updated)
+                                      }}
+                                      className="w-full px-2 py-1 bg-gray-850 border border-gray-700 text-white text-[11px] rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="block text-[8px] text-gray-500 font-bold uppercase mb-0.5">Label</span>
+                                    <input
+                                      type="text"
+                                      value={tier.label}
+                                      onChange={(e) => {
+                                        const updated = [...localTiers]
+                                        updated[idx].label = e.target.value
+                                        setLocalTiers(updated)
+                                      }}
+                                      placeholder="e.g. Grosir 3-5"
+                                      className="w-full px-2 py-1 bg-gray-850 border border-gray-700 text-white text-[11px] rounded"
+                                    />
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setLocalTiers(localTiers.filter((_, i) => i !== idx))}
+                                  className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/20 rounded mt-3"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ⚡ FLASH SALE SECTION */}
+                  <div className="border border-gray-700 rounded-xl overflow-hidden bg-gray-900/20">
+                    <div className="flex items-center justify-between p-4 bg-gray-750 border-b border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚡</span>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Timer Flash Sale (Optional)</h4>
+                          <p className="text-[10px] text-gray-400">Tampilkan hitungan mundur / countdown di layar POS</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.isFlashSale}
+                          onChange={(e) => setFormData({ ...formData, isFlashSale: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                      </label>
+                    </div>
+
+                    {formData.isFlashSale && (
+                      <div className="p-5 space-y-3 bg-gray-800/40 animate-in slide-in-from-top duration-200">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                            Tanggal & Jam Berakhir Flash Sale *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={formData.flashSaleEndDateTime}
+                            onChange={(e) => setFormData({ ...formData, flashSaleEndDateTime: e.target.value })}
+                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 text-xs"
+                            required={formData.isFlashSale}
+                          />
+                          <p className="text-[10px] text-gray-400 mt-1">Pilih tanggal dan jam kapan flash sale ditutup otomatis</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {/* Form Footer Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-750 shrink-0">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+                  className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg text-sm transition-all"
                 >
-                  Cancel
+                  Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-all shadow-md shadow-blue-900/30"
                 >
-                  {editingPromo ? 'Update' : 'Create'}
+                  {editingPromo ? 'Simpan Perubahan' : 'Buat Promosi'}
                 </button>
               </div>
             </form>
