@@ -1434,8 +1434,29 @@ export default function PromotionsPage() {
                 </div>
               )}
 
+              {/* Cross-tab validation error display */}
+              {(!formData.name || !formData.name.trim() || (isBundleActive && selectedBundleItems.length === 0) || (isBundleActive && !formData.bundlePrice)) && (
+                <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-[11px] space-y-1 mx-6 mt-2">
+                  {(!formData.name || !formData.name.trim()) && (
+                    <p className="text-red-400 font-medium flex items-center gap-1">
+                      ⚠️ Nama Promosi belum diisi (Lengkapi di Tab Info Dasar)
+                    </p>
+                  )}
+                  {isBundleActive && selectedBundleItems.length === 0 && (
+                    <p className="text-red-400 font-medium flex items-center gap-1">
+                      ⚠️ Produk paket bundle belum dipilih (Lengkapi di Tab Target & Lanjutan)
+                    </p>
+                  )}
+                  {isBundleActive && !formData.bundlePrice && (
+                    <p className="text-red-400 font-medium flex items-center gap-1">
+                      ⚠️ Harga Paket Baru belum diisi (Lengkapi di Tab Target & Lanjutan)
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Form Footer Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-750 shrink-0">
+              <div className="flex gap-3 p-6 pt-4 border-t border-gray-750 shrink-0">
                 <button
                   type="button"
                   onClick={handleCloseModal}
