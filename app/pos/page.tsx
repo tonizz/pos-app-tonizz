@@ -255,6 +255,10 @@ export default function POSPage() {
       const now = new Date()
       const start = new Date(promo.startDate)
       const end = new Date(promo.endDate)
+      
+      // Ensure end date covers the full day (23:59:59)
+      end.setHours(23, 59, 59, 999)
+      
       const isInDateRange = start <= now && end >= now
       const meetsMinPurchase = !promo.minPurchase || subtotal >= promo.minPurchase
 
@@ -428,12 +432,20 @@ export default function POSPage() {
       return
     }
 
-    const voucher = promotions.find(p =>
-      p.voucherCode === voucherCode.trim() &&
-      p.isActive &&
-      new Date(p.startDate) <= new Date() &&
-      new Date(p.endDate) >= new Date()
-    )
+    const voucher = promotions.find(p => {
+      const start = new Date(p.startDate)
+      const end = new Date(p.endDate)
+      
+      // Ensure end date covers the full day (23:59:59)
+      end.setHours(23, 59, 59, 999)
+      
+      return (
+        p.voucherCode === voucherCode.trim() &&
+        p.isActive &&
+        start <= new Date() &&
+        end >= new Date()
+      )
+    })
 
     if (!voucher) {
       toast.error('Invalid or expired voucher code')

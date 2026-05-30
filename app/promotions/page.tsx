@@ -492,6 +492,11 @@ export default function PromotionsPage() {
       const startDate = parseDateFromInput(formData.startDate)
       const endDate = parseDateFromInput(formData.endDate)
 
+      // Set end date to the end of the day (23:59:59.999) so it remains active all day
+      if (!isNaN(endDate.getTime())) {
+        endDate.setHours(23, 59, 59, 999)
+      }
+
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         toast.error('Invalid date format')
         return
