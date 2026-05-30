@@ -1,7 +1,14 @@
 import jwt from 'jsonwebtoken'
 
-// MASTER_SECRET hanya ada di .env.local developer — JANGAN push ke GitHub
-const MASTER_SECRET = process.env.LICENSE_MASTER_SECRET || 'CHANGE_THIS_IN_ENV'
+// Dibaca LAZY (di dalam fungsi) bukan module-level
+// supaya dotenv.config() di script sudah jalan duluan
+function getMasterSecret(): string {
+  const secret = process.env.LICENSE_MASTER_SECRET
+  if (!secret || secret === 'CHANGE_THIS_IN_ENV') {
+    throw new Error('LICENSE_MASTER_SECRET belum dikonfigurasi di .env.local')
+  }
+  return secret
+}
 
 export type FeatureCode =
   | 'pos'
@@ -79,7 +86,7 @@ export function generateLicense(options: {
     signOptions.expiresIn = Math.floor((options.expiresAt.getTime() - Date.now()) / 1000)
   }
 
-  return jwt.sign(payload, MASTER_SECRET, signOptions)
+  return jwt.sign(payload, getMasterSecret(), signOptions)
 }
 
 /**
@@ -88,7 +95,7 @@ export function generateLicense(options: {
  */
 export function validateLicense(key: string): LicenseInfo | null {
   try {
-    const decoded = jwt.verify(key, MASTER_SECRET) as LicensePayload
+    const decoded = jwt.verify(key, getMasterSecret()) as LicensePayload
     const now = new Date()
     const isExpired = decoded.expiresAt ? new Date(decoded.expiresAt) < now : false
     const daysRemaining = decoded.expiresAt
