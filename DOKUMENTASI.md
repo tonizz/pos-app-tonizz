@@ -391,4 +391,40 @@ CLOUDINARY_*          — Konfigurasi upload foto
 
 ---
 
+## 13. Fitur Terbaru (Update 30 Mei 2026)
+
+> Dokumentasi lengkap ada di **[DOKUMENTASI_FITUR_BARU.md](./DOKUMENTASI_FITUR_BARU.md)**
+
+### 13.1 Owner Mobile Dashboard (`/owner`)
+Dashboard khusus pemilik toko, mobile-first. Akses via tombol **"Owner View"** di header.
+
+**Konten:** Jam live, revenue hari ini + growth %, KPI cards, chart 7 hari, top produk, transaksi terbaru, stok kritis, shift aktif.
+
+**Role:** SUPER_ADMIN, ADMIN, MANAGER | **Lisensi:** `owner_dashboard`
+
+### 13.2 Produk Terlaris Per Jam (`/analytics`)
+Section baru di halaman Analytics. Heatmap 24 jam × produk terlaris.
+
+**Cara pakai:** Klik jam → lihat ranking produk di jam itu. Heatmap menunjukkan intensitas penjualan dengan warna.
+
+**Lisensi:** `analytics`
+
+### 13.3 Sistem Lisensi Fitur
+Fitur berbayar dikunci dengan License Key. Key dibuat oleh developer via:
+```bash
+npm run license:generate
+```
+
+**Fitur gratis** (tanpa key): POS, Inventory, Laporan
+
+**Aktivasi key:** Login SUPER_ADMIN → buka `/license` → paste key → aktifkan.
+
+**Environment variable wajib di Vercel:**
+```
+LICENSE_MASTER_SECRET=your_very_secret_key_here
+```
+
+---
+
 *Dokumentasi ini mencakup semua fitur yang telah diimplementasikan per Mei 2026.*
+*Update terakhir: 30 Mei 2026 — ditambahkan Owner Dashboard, Produk Per Jam, dan License System.*
