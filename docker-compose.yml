@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Database PostgreSQL
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: pos_database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pos_db
+      POSTGRES_USER: pos_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pos_secret_2026}
+    volumes:
+      - pos_db_data:/var/lib/postgresql/data
+    networks:
+      - pos_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos_user -d pos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ============================================
+  # Aplikasi POS
+  # ============================================
+  app:
+    image: pos-app:latest
+    container_name: pos_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://pos_user:${DB_PASSWORD:-pos_secret_2026}@db:5432/pos_db
+        JWT_SECRET: ${JWT_SECRET}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+        LICENSE_MASTER_SECRET: ${LICENSE_MASTER_SECRET}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://pos_user:${DB_PASSWORD:-pos_secret_2026}@db:5432/pos_db
+      JWT_SECRET: ${JWT_SECRET}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: http://localhost:3000
+      LICENSE_MASTER_SECRET: ${LICENSE_MASTER_SECRET}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pos_network
+
+# ============================================
+# Storage Data (Persisten)
+# ============================================
+volumes:
+  pos_db_data:
+    name: pos_database_data
+
+networks:
+  pos_network:
+    name: pos_network

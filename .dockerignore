@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Next.js
+.next
+out
+
+# Git
+.git
+.gitignore
+
+# Env files (akan diisi via docker-compose)
+.env
+.env.*
+!.env.example
+
+# Development files
+*.md
+.vscode
+.idea
+
+# Test
+coverage
+__tests__
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup
+backup
+backup_data
+licenses
+
+# Scripts lokal
+scripts/set-vercel-env.js
