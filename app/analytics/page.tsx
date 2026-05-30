@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '@/lib/utils'
 import toast, { Toaster } from 'react-hot-toast'
+import FeatureGuard from '@/components/FeatureGuard'
 import {
   TrendingUp,
   Clock,
@@ -21,6 +22,14 @@ import {
 } from 'lucide-react'
 
 export default function AnalyticsPage() {
+  return (
+    <FeatureGuard feature="analytics">
+      <AnalyticsContent />
+    </FeatureGuard>
+  )
+}
+
+function AnalyticsContent() {
   const router = useRouter()
   const { token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [loading, setLoading] = useState(true)

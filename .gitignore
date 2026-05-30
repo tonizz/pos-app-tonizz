@@ -54,3 +54,7 @@ next-env.d.ts
 test-supabase-connection.js
 
 .vercel
+
+# license keys — JANGAN di-commit ke GitHub
+/licenses/
+.env.local

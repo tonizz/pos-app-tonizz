@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '@/lib/utils'
 import toast, { Toaster } from 'react-hot-toast'
+import FeatureGuard from '@/components/FeatureGuard'
 import {
   TrendingUp,
   TrendingDown,
@@ -48,6 +49,14 @@ function formatDayDate(): string {
 }
 
 export default function OwnerDashboardPage() {
+  return (
+    <FeatureGuard feature="owner_dashboard">
+      <OwnerDashboardContent />
+    </FeatureGuard>
+  )
+}
+
+function OwnerDashboardContent() {
   const router = useRouter()
   const { user, token, isAuthenticated, _hasHydrated } = useAuthStore()
   const [data, setData] = useState<any>(null)
