@@ -481,6 +481,11 @@ export default function PromotionsPage() {
         return parts.length > 0 ? JSON.stringify(parts) : null
       }
 
+      let submitValue = formData.value
+      if (!submitValue || submitValue.trim() === '') {
+        submitValue = '0'
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -489,6 +494,7 @@ export default function PromotionsPage() {
         },
         body: JSON.stringify({
           ...formData,
+          value: submitValue,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           flashSaleEndTime,
