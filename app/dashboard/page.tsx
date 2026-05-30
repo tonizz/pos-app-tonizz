@@ -99,6 +99,16 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-400">Welcome back, {user?.name}</p>
             </div>
             <div className="flex items-center gap-4">
+              {/* Owner View button — hanya untuk SUPER_ADMIN, ADMIN, MANAGER */}
+              {['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(user?.role || '') && (
+                <button
+                  onClick={() => router.push('/owner')}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+                >
+                  <Shield size={18} />
+                  Owner View
+                </button>
+              )}
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}

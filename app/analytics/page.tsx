@@ -15,7 +15,9 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Flame,
+  Package
 } from 'lucide-react'
 
 export default function AnalyticsPage() {
@@ -29,6 +31,8 @@ export default function AnalyticsPage() {
   const [customerPatterns, setCustomerPatterns] = useState<any>(null)
   const [productCorrelation, setProductCorrelation] = useState<any>(null)
   const [profitMargin, setProfitMargin] = useState<any>(null)
+  const [topByHour, setTopByHour] = useState<any>(null)
+  const [selectedHour, setSelectedHour] = useState<number | null>(null)
 
   useEffect(() => {
       if (!_hasHydrated) return
@@ -44,12 +48,13 @@ export default function AnalyticsPage() {
     try {
       const headers = { 'Authorization': `Bearer ${token}` }
 
-      const [trends, hours, patterns, correlation, margin] = await Promise.all([
+      const [trends, hours, patterns, correlation, margin, byHour] = await Promise.all([
         fetch(`/api/analytics/sales-trends?days=${period}`, { headers }).then(r => r.json()),
         fetch(`/api/analytics/peak-hours?days=${period}`, { headers }).then(r => r.json()),
         fetch(`/api/analytics/customer-patterns?days=${period}`, { headers }).then(r => r.json()),
         fetch(`/api/analytics/product-correlation?days=${period}`, { headers }).then(r => r.json()),
-        fetch(`/api/analytics/profit-margin?days=${period}`, { headers }).then(r => r.json())
+        fetch(`/api/analytics/profit-margin?days=${period}`, { headers }).then(r => r.json()),
+        fetch(`/api/analytics/top-products-by-hour?days=${period}`, { headers }).then(r => r.json()),
       ])
 
       setSalesTrends(trends)
@@ -57,6 +62,12 @@ export default function AnalyticsPage() {
       setCustomerPatterns(patterns)
       setProductCorrelation(correlation)
       setProfitMargin(margin)
+      setTopByHour(byHour)
+      // Auto-select jam puncak
+      if (hours?.insights?.peakHour?.hour) {
+        const peakH = parseInt(hours.insights.peakHour.hour.split(':')[0])
+        setSelectedHour(peakH)
+      }
     } catch (error: any) {
       toast.error('Failed to fetch analytics')
     } finally {
@@ -465,6 +476,201 @@ export default function AnalyticsPage() {
             )}
           </div>
         )}
+
+        {/* ── Top Products by Hour ── */}
+        {topByHour && topByHour.heatmapData && topByHour.heatmapData.length > 0 && (() => {
+          const heatmap: any[] = topByHour.heatmapData
+          const hourlyTop: any[] = topByHour.hourlyTopProducts || []
+          const maxQty: number = topByHour.maxQty || 1
+
+          const activeHourData = selectedHour !== null
+            ? hourlyTop.find((h: any) => h.hour === selectedHour)
+            : null
+
+          // Jam yang punya data
+          const activeHours = hourlyTop.filter((h: any) => h.totalQty > 0).map((h: any) => h.hour)
+
+          return (
+            <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-lg p-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <Flame className="w-6 h-6 text-orange-400" />
+                <h2 className="text-xl font-bold text-white">Produk Terlaris per Jam</h2>
+              </div>
+              <p className="text-sm text-gray-400 mb-6">
+                Klik jam di bawah untuk melihat ranking produk terlaris pada jam tersebut.
+              </p>
+
+              {/* ── Jam Selector ── */}
+              <div className="mb-6">
+                <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">Pilih Jam</p>
+                <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-12">
+                  {Array.from({ length: 24 }, (_, h) => {
+                    const hData = hourlyTop.find((d: any) => d.hour === h)
+                    const hasData = (hData?.totalQty || 0) > 0
+                    const isSelected = selectedHour === h
+                    const intensity = hasData ? (hData.totalQty / Math.max(...hourlyTop.map((d: any) => d.totalQty), 1)) : 0
+                    return (
+                      <button
+                        key={h}
+                        onClick={() => setSelectedHour(h)}
+                        title={`${String(h).padStart(2,'0')}:00 — ${hData?.totalQty || 0} pcs`}
+                        className={`relative rounded-lg py-2 text-xs font-bold transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-orange-400 scale-110 z-10'
+                            : 'hover:scale-105'
+                        } ${
+                          !hasData ? 'bg-gray-700 text-gray-600' : ''
+                        }`}
+                        style={hasData ? {
+                          background: isSelected
+                            ? `rgba(249, 115, 22, ${0.4 + intensity * 0.6})`
+                            : `rgba(249, 115, 22, ${0.15 + intensity * 0.55})`,
+                          color: isSelected ? '#fff' : `rgba(255,255,255,${0.5 + intensity * 0.5})`,
+                        } : {}}
+                      >
+                        {String(h).padStart(2, '0')}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded bg-gray-700" />
+                    <span>Tidak ada transaksi</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded" style={{ background: 'rgba(249,115,22,0.3)' }} />
+                    <span>Sepi</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded" style={{ background: 'rgba(249,115,22,0.9)' }} />
+                    <span>Ramai</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Ranking Produk Jam Terpilih ── */}
+              {activeHourData && activeHourData.topProducts.length > 0 ? (
+                <div className="bg-gray-700/50 border border-gray-600 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-5 h-5 text-orange-400" />
+                      <h3 className="font-semibold text-white">
+                        Jam {activeHourData.hourLabel}
+                      </h3>
+                    </div>
+                    <span className="text-sm text-gray-400">
+                      Total: <span className="font-bold text-white">{activeHourData.totalQty} pcs</span>
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {activeHourData.topProducts.map((p: any, idx: number) => {
+                      const barW = (p.qty / activeHourData.topProducts[0].qty) * 100
+                      return (
+                        <div key={p.productId}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className={`text-sm font-bold w-6 text-center ${
+                                idx === 0 ? 'text-amber-400' :
+                                idx === 1 ? 'text-gray-300' :
+                                idx === 2 ? 'text-orange-700' : 'text-gray-500'
+                              }`}>
+                                {idx + 1}
+                              </span>
+                              <p className="text-sm text-gray-200 truncate">{p.name}</p>
+                            </div>
+                            <div className="text-right ml-3 shrink-0">
+                              <p className="text-sm font-bold text-white">{p.qty} pcs</p>
+                              <p className="text-xs text-gray-500">{formatCurrency(p.revenue)}</p>
+                            </div>
+                          </div>
+                          <div className="ml-8 h-1.5 bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${barW}%`,
+                                background: idx === 0
+                                  ? 'linear-gradient(90deg, #f97316, #fb923c)'
+                                  : 'rgba(249,115,22,0.4)',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : selectedHour !== null ? (
+                <div className="bg-gray-700/30 border border-gray-700 rounded-xl p-8 text-center">
+                  <Clock className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500">Tidak ada transaksi pada jam {String(selectedHour).padStart(2,'0')}:00</p>
+                </div>
+              ) : (
+                <div className="bg-gray-700/30 border border-gray-700 rounded-xl p-8 text-center">
+                  <p className="text-gray-500">Pilih jam di atas untuk melihat detail produk</p>
+                </div>
+              )}
+
+              {/* ── Heatmap Tabel ── */}
+              <div className="mt-6">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Heatmap Penjualan</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse" style={{ minWidth: '700px' }}>
+                    <thead>
+                      <tr>
+                        <th className="text-left py-2 pr-3 text-gray-400 font-medium w-36 sticky left-0 bg-gray-800 z-10">Produk</th>
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <th
+                            key={h}
+                            className={`text-center py-2 px-0.5 font-medium cursor-pointer transition-colors ${
+                              selectedHour === h ? 'text-orange-400' : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                            onClick={() => setSelectedHour(h)}
+                          >
+                            {String(h).padStart(2,'0')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {heatmap.map((row: any) => (
+                        <tr key={row.productId} className="hover:bg-gray-700/30">
+                          <td className="py-1.5 pr-3 text-gray-300 truncate max-w-[144px] sticky left-0 bg-gray-800 z-10"
+                              title={row.name}>
+                            {row.name}
+                          </td>
+                          {row.hourData.map((cell: any) => {
+                            const intensity = cell.qty > 0 ? cell.qty / maxQty : 0
+                            const isSelectedCol = selectedHour === cell.hour
+                            return (
+                              <td
+                                key={cell.hour}
+                                className={`text-center py-1.5 px-0.5 cursor-pointer transition-all ${
+                                  isSelectedCol ? 'ring-1 ring-orange-500/50' : ''
+                                }`}
+                                onClick={() => setSelectedHour(cell.hour)}
+                                title={cell.qty > 0 ? `${row.name} — ${String(cell.hour).padStart(2,'0')}:00 — ${cell.qty} pcs` : ''}
+                              >
+                                <div
+                                  className="w-5 h-5 rounded mx-auto"
+                                  style={{
+                                    background: cell.qty > 0
+                                      ? `rgba(249,115,22,${0.12 + intensity * 0.85})`
+                                      : 'transparent',
+                                  }}
+                                />
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
