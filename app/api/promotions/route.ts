@@ -96,8 +96,16 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!name || !type || !value || !startDate || !endDate) {
+      const missing = [];
+      if (!name) missing.push('name');
+      if (!type) missing.push('type');
+      if (!value) missing.push('value');
+      if (!startDate) missing.push('startDate');
+      if (!endDate) missing.push('endDate');
+      
+      console.error('Validation failed. Missing fields:', missing, 'Received body:', body);
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: `Missing required fields: ${missing.join(', ')}` },
         { status: 400 }
       )
     }

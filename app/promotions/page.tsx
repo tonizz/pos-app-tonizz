@@ -486,22 +486,26 @@ export default function PromotionsPage() {
         submitValue = '1'
       }
 
+      const payload = {
+        ...formData,
+        value: submitValue,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        flashSaleEndTime,
+        applicableProductIds: toJsonArray(formData.applicableProductIds),
+        bundleProductIds: selectedBundleItems.length > 0 ? JSON.stringify(selectedBundleItems.map(p => p.id)) : null,
+        tiers: localTiers.length > 0 ? JSON.stringify(localTiers) : null
+      }
+
+      console.log('Sending Promotion Payload:', payload)
+
       const response = await fetch(url, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...formData,
-          value: submitValue,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          flashSaleEndTime,
-          applicableProductIds: toJsonArray(formData.applicableProductIds),
-          bundleProductIds: selectedBundleItems.length > 0 ? JSON.stringify(selectedBundleItems.map(p => p.id)) : null,
-          tiers: localTiers.length > 0 ? JSON.stringify(localTiers) : null
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
@@ -513,6 +517,7 @@ export default function PromotionsPage() {
       handleCloseModal()
       fetchPromotions()
     } catch (error: any) {
+      console.error('Error submitting promotion:', error)
       toast.error(error.message)
     }
   }
