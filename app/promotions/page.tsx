@@ -431,6 +431,57 @@ export default function PromotionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Client-side validation across tabs
+    if (!formData.name || !formData.name.trim()) {
+      toast.error('Nama Promosi wajib diisi! (Silakan isi di Tab Info Dasar)')
+      setActiveTab('general')
+      return
+    }
+
+    if (!formData.startDate) {
+      toast.error('Tanggal Mulai wajib diisi! (Silakan isi di Tab Info Dasar)')
+      setActiveTab('general')
+      return
+    }
+
+    if (!formData.endDate) {
+      toast.error('Tanggal Berakhir wajib diisi! (Silakan isi di Tab Info Dasar)')
+      setActiveTab('general')
+      return
+    }
+
+    if (formData.type === 'VOUCHER' && (!formData.voucherCode || !formData.voucherCode.trim())) {
+      toast.error('Kode Voucher wajib diisi! (Silakan isi di Tab Aturan Diskon)')
+      setActiveTab('rules')
+      return
+    }
+
+    if (formData.type === 'BUY_X_GET_Y') {
+      if (!formData.buyQuantity || parseInt(formData.buyQuantity) <= 0) {
+        toast.error('Jumlah Beli (X) wajib diisi dan lebih dari 0! (Silakan isi di Tab Aturan Diskon)')
+        setActiveTab('rules')
+        return
+      }
+      if (!formData.getQuantity || parseInt(formData.getQuantity) <= 0) {
+        toast.error('Jumlah Gratis (Y) wajib diisi dan lebih dari 0! (Silakan isi di Tab Aturan Diskon)')
+        setActiveTab('rules')
+        return
+      }
+    }
+
+    if (isBundleActive) {
+      if (selectedBundleItems.length === 0) {
+        toast.error('Silakan cari dan tambahkan produk ke dalam Paket Bundle! (Tab Target & Lanjutan)')
+        setActiveTab('advanced')
+        return
+      }
+      if (!formData.bundlePrice || parseFloat(formData.bundlePrice) < 0) {
+        toast.error('Harga Paket Baru wajib diisi! (Tab Target & Lanjutan)')
+        setActiveTab('advanced')
+        return
+      }
+    }
+
     try {
       const url = editingPromo
         ? `/api/promotions/${editingPromo.id}`
