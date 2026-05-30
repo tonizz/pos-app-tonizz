@@ -482,8 +482,8 @@ export default function PromotionsPage() {
       }
 
       let submitValue = formData.value
-      if (!submitValue || submitValue.trim() === '') {
-        submitValue = '0'
+      if (!submitValue || submitValue.trim() === '' || submitValue === '0' || parseFloat(submitValue) === 0) {
+        submitValue = '1'
       }
 
       const response = await fetch(url, {
